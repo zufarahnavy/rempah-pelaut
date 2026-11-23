@@ -1,6 +1,8 @@
 # Panduan Instalasi — Minuman Rempah Pelaut Management System
 
-Versi 1.0.0 · Zona waktu WITA (Asia/Makassar)
+Versi 1.1.0 · Zona waktu WITA (Asia/Makassar)
+
+> **Sudah memasang versi 1.0?** Langsung ke [bagian 0 — Update dari v1.0 ke v1.1](#0-update-dari-v10-ke-v11). Data Anda tidak berubah.
 
 Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tahap ditutup dengan tanda **✅ Berhasil bila…** agar Anda tahu kapan boleh lanjut.
 
@@ -8,6 +10,7 @@ Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tah
 
 ## Daftar isi
 
+0. [Update dari v1.0 ke v1.1](#0-update-dari-v10-ke-v11)
 1. [Isi paket & ke mana setiap berkas pergi](#1-isi-paket--ke-mana-setiap-berkas-pergi)
 2. [Gambaran cara kerja aplikasi](#2-gambaran-cara-kerja-aplikasi)
 3. [Tahap A — Pasang backend di Google Apps Script](#3-tahap-a--pasang-backend-di-google-apps-script)
@@ -24,6 +27,63 @@ Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tah
 14. [Fungsi yang bisa dijalankan dari editor](#14-fungsi-yang-bisa-dijalankan-dari-editor)
 15. [Batasan yang perlu diketahui](#15-batasan-yang-perlu-diketahui)
 16. [Kendala umum & solusinya](#16-kendala-umum--solusinya)
+17. [Pembatalan, koreksi & aturan PIN (v1.1)](#17-pembatalan-koreksi--aturan-pin-v11)
+18. [Status sinkron: Pending, Berhasil, Gagal](#18-status-sinkron-pending-berhasil-gagal)
+
+---
+
+## 0. Update dari v1.0 ke v1.1
+
+Bagian ini untuk Anda yang **sudah** memakai versi 1.0. Semua data (transaksi, closing, stok, aset, dokumen) tetap utuh. Update hanya **menambah** kolom baru dan tidak menghapus apa pun.
+
+**Urutan wajib: backend dulu, baru frontend.** Frontend v1.1 membutuhkan alamat-alamat API baru yang hanya ada di backend v1.1.
+
+### 0a. Backend (Apps Script)
+1. Buka proyek Apps Script Anda. Cadangkan dulu: salin isi `Kode.gs`, `Setup.gs`, dan `DocEngine.gs` lama ke Notepad.
+2. Ganti isi ketiga berkas dengan versi 1.1 (salin-tempel seluruhnya), lalu **Ctrl+S**.
+3. Pilih fungsi `perbaruiSkema` di dropdown editor → **▶ Run**. Contoh log yang benar:
+   `✅ Master_Menu ✓ • … • Pengguna (+5 kolom) • DE_Dokumen (+1 kolom) • Tema diperbarui ke v1.1 (warna) (font)`
+   - Kolom baru yang ditambahkan: PIN tanda tangan & panjang PIN di sheet **Pengguna**, kolom pembatalan (status, alasan, oleh, waktu) di sheet transaksi, dan kolom **koreksi** di **DE_Dokumen**.
+   - Warna & font hanya diganti ke tampilan baru **bila masih bawaan v1.0**. Bila Anda sudah mengubahnya sendiri, tidak disentuh. Nilai lama disimpan di baris `TEMA_SEBELUM_V11` pada sheet Pengaturan.
+4. **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy.**
+   > Pakai **Edit**, bukan *New deployment*, agar alamat `/exec` tetap sama dan `config.js` tidak perlu diubah.
+5. Buka alamat `/exec` di browser. Harus muncul tulisan JSON yang memuat `"versi":"1.1.0"`.
+
+### 0b. Frontend (GitHub Pages)
+1. Ekstrak `rempah-pelaut-frontend.zip` v1.1 ke folder sementara.
+2. Salin semua isinya ke folder repository Anda (timpa yang lama), **kecuali `js/config.js`**. Jangan timpa `config.js` karena di situ alamat `/exec` Anda.
+3. Hapus dua berkas lama yang tidak dipakai lagi:
+   ```bash
+   git rm assets/ilustrasi-cangkir.svg assets/kompas.svg
+   ```
+   (Bila muncul pesan *did not match any files*, berarti sudah tidak ada. Lanjutkan saja.)
+4. Kirim ke GitHub:
+   ```bash
+   git add .
+   git commit -m "Update ke v1.1"
+   git push
+   ```
+5. Tunggu 1–2 menit, buka aplikasi, lalu tekan **Ctrl+Shift+R**. Di HP: tutup aplikasi sepenuhnya, lalu buka lagi. Versi tampil di kaki halaman: **versi 1.1.0**.
+
+> Bila frontend sudah 1.1 tetapi backend masih 1.0, aplikasi menampilkan pita peringatan "versi server berbeda". Ulangi langkah 0a.
+
+### 0c. Setelah update (5 menit, sebagai Owner)
+1. **Pengaturan → Keamanan & PIN**: periksa panjang PIN, batas salah, lama sesi, kunci layar otomatis, dan daftar aksi yang meminta PIN ulang. Tekan **Simpan aturan PIN** (akan diminta PIN Owner).
+2. **Pengaturan → Peran & hak akses**: tentukan apakah Kasir boleh membatalkan transaksinya sendiri (aturan *Boleh membatalkan transaksi & biaya miliknya sendiri*).
+3. Coba satu transaksi POS, lalu batalkan lewat kotak centang di **Riwayat** (bagian 17).
+
+### Apa yang baru di v1.1
+| Area | Perubahan |
+|---|---|
+| Tampilan | Gaya baru "kedai hangat & rapi": datar, tanpa gradasi & efek kaca, huruf Plus Jakarta Sans. Animasi hanya sekali per halaman, tidak berkedip saat data diperbarui |
+| POS | Pilihan tampilan **kartu** atau **daftar**; ringkasan pesanan menyebut nama setiap menu; angka Total masuk tidak terpotong; POS terkunci otomatis setelah closing |
+| Pembatalan | Kotak centang di setiap daftar transaksi, biaya, nota belanja, opname, menu, bahan, aset, pengguna, dan draf dokumen. Data dibatalkan dengan alasan, **tidak dihapus** |
+| Koreksi Owner | Hari yang sudah closing bisa langsung dikoreksi Owner (dengan alasan). Saldo hari itu dan sesudahnya dihitung ulang, slip yang sudah terbit ditandai **dikoreksi** |
+| PIN | Pengaturan lengkap aturan PIN, PIN tanda tangan terpisah (opsional), kunci layar otomatis |
+| Dokumen | Slot tanda tangan mengikuti akun yang login (tidak ada pilihan nama). PDF dibuat di latar sehingga tanda tangan terasa cepat |
+| Pratinjau | Semua unduhan (laporan, aset, log opname, riwayat aktivitas) dan dokumen PDF dipratinjau dulu di dalam aplikasi. Foto dipratinjau sebelum diunggah |
+| Validasi | Angka minus ditolak di semua form (belanja, aset, biaya, opname); nama bahan wajib diisi |
+| Sinkron | Status **Pending / Berhasil / Gagal** untuk transaksi yang tersimpan saat sinyal lemah, plus **Tes koneksi server** |
 
 ---
 
@@ -52,7 +112,7 @@ rempah-pelaut-frontend/        ← folder ini yang nanti di-"git init"
 ├── css/style.css
 ├── js/config.js               ← SATU-SATUNYA berkas yang perlu Anda ubah
 ├── js/core.js, app.js, charts.js, qr.js, pages-*.js
-└── assets/                    ← logo, ikon, ilustrasi menu, bahan, dan aset
+└── assets/                    ← logo, ikon, ilustrasi menu, bahan, dan aset (tanpa gambar ilustrasi besar; ikon digambar langsung oleh aplikasi)
 ```
 
 > ⚠️ Berkas `.gs` sengaja **tidak** ada di dalam ZIP. Jangan pernah mengunggah berkas `.gs` ke GitHub, karena repository GitHub Pages bersifat publik.
@@ -244,13 +304,14 @@ Data demo mencakup:
 Hari pertama data demo sama persis dengan contoh di PRD: 71 cup, saldo Rp 8.575.000 → Rp 9.245.500.
 
 Saran uji coba (sekitar 10 menit):
-1. **Kasir (Budi)**: tekan **F2** atau **Transaksi Baru**, pilih menu, lalu **Simpan**. Transaksi langsung muncul di riwayat.
-2. **Mode offline**: matikan Wi-Fi, lalu simpan transaksi. Transaksi masuk antrean dan banner kuning muncul. Nyalakan Wi-Fi lagi; antrean terkirim otomatis tanpa data ganda.
-3. **Pengeluaran**: catat biaya. Bila melewati plafon harian, kasir ditolak, kecuali Owner mengizinkannya.
-4. **Owner (Haji Ridwan)**: buka **Dashboard** dan **Analitik Penjualan** (ganti 7/30/90 hari, arahkan kursor ke grafik).
-5. **Laporan & Unduh**: unduh Excel atau PDF.
-6. **Daily Closing**: periksa rumus saldo, lalu **Konfirmasi & Kunci**.
-7. **Dokumen Resmi**: buka dokumen "Menunggu TTD", tanda tangani dengan PIN, lalu klik **Cek Verifikasi**.
+1. **Kasir (Budi)**: tekan **F2** atau **Transaksi baru**, pilih menu (coba tombol tampilan **kartu/daftar** di samping kotak cari), lalu **Simpan transaksi**. Ringkasan pesanan menampilkan nama setiap menu.
+2. **Batalkan transaksi**: buka **Riwayat**, centang transaksi tadi → **Batalkan** → tulis alasan. Transaksi tetap terlihat dengan tanda *Dibatalkan* dan tidak dihitung di omset.
+3. **Mode offline**: menu akun → **Uji mode offline**, lalu simpan transaksi. Transaksi berstatus **Pending**. Matikan uji offline; transaksi terkirim otomatis tanpa data ganda.
+4. **Pengeluaran**: catat biaya. Bila melewati plafon harian, kasir ditolak, kecuali Owner mengizinkannya.
+5. **Owner (Haji Ridwan)**: buka **Dashboard** dan **Analitik penjualan** (ganti 7/30/90 hari, arahkan kursor ke grafik).
+6. **Laporan & unduh**: tekan **Pratinjau & unduh**, periksa tabel/PDF-nya, lalu unduh Excel atau PDF.
+7. **Daily closing**: periksa rumus saldo, lalu **Closing & kunci**. Setelah itu POS terkunci dan tombol + mati.
+8. **Dokumen resmi**: buka dokumen "Menunggu tanda tangan", tanda tangani dengan PIN, lalu buka **Halaman verifikasi**.
 
 > Di HP, buka alamat GitHub Pages di Chrome, lalu ⋮ → **Add to Home screen** (Tambahkan ke layar utama). Aplikasi akan terbuka layar penuh seperti aplikasi biasa.
 
@@ -283,11 +344,12 @@ Menu **Pengaturan Aplikasi** hanya bisa dibuka Owner:
 | Tab | Yang bisa diubah |
 |---|---|
 | **Identitas & Logo** | Nama aplikasi, nama singkat, tagline, nama lapak, alamat, kota, logo, dan **URL publik** (lihat bagian 9) |
-| **Warna & Font** | 5 preset tema, 11 warna (aksen, latar, kartu, teks, status), font judul & isi (Google Fonts), kelengkungan sudut. Pratinjau langsung sebelum disimpan |
-| **Peran & Hak Akses** | Nama tampilan peran Owner/Kasir, centang menu yang boleh dibuka Kasir, serta 6 aturan Kasir: ubah harga dinamis, hapus transaksi, tanggal mundur, lihat saldo kas, lewati plafon, ajukan slip dokumen |
+| **Warna & font** | 5 preset tema, 11 warna (aksen, latar, kartu, teks, status), font judul & isi (Google Fonts), kelengkungan sudut. Pratinjau langsung sebelum disimpan |
+| **Keamanan & PIN** | Panjang PIN (4–8), batas salah & lama dikunci, lama sesi, kunci layar otomatis, tolak PIN lemah, wajib ganti berkala, aksi yang meminta PIN ulang, PIN tanda tangan terpisah (lihat bagian 17) |
+| **Peran & hak akses** | Nama tampilan peran Owner/Kasir, centang menu yang boleh dibuka Kasir, serta 6 aturan Kasir: ubah harga dinamis, batalkan transaksi sendiri, tanggal mundur, lihat saldo kas, lewati plafon, ajukan slip dokumen |
 | **Operasional Lapak** | Target cup harian, plafon biaya operasional kasir per hari, jam buka/tutup, saldo awal pertama, tanggal mulai pembukuan |
 | **Kategori & Master** | Kategori biaya (dengan nominal acuan), tombol cepat biaya, metode pembayaran, jenis pesanan, kategori menu, kategori stok, kategori aset, satuan |
-| **Data & Sistem** | Status sistem, Import dari spreadsheet lama, Audit log, Mulai Data Riil |
+| **Data & sistem** | Status sistem, impor dari spreadsheet lama (dengan pratinjau), riwayat aktivitas (bisa dipratinjau & diunduh), Mulai data riil |
 
 Menu **Pengguna & PIN** dan **Pengaturan** selalu khusus Owner dan tidak bisa diberikan ke Kasir. Ini disengaja, agar Kasir tidak bisa menaikkan hak aksesnya sendiri.
 
@@ -300,10 +362,16 @@ Setup membuat empat template Google Docs di folder Drive **Minuman Rempah Pelaut
 
 | Kode | Dokumen | Penanda tangan |
 |---|---|---|
-| `SLIP_CLOSING` | Slip Tutup Kasir Harian | Kasir pembuat → Owner |
+| `SLIP_CLOSING` | Slip Tutup Kasir Harian | Kasir yang melakukan closing → Owner |
 | `NOTA_BELANJA` | Nota Belanja Bahan | Owner |
 | `BA_OPNAME` | Berita Acara Stok Opname | Owner |
 | `LAP_BULANAN` | Laporan Kas Bulanan | Owner |
+
+**Tidak ada pilihan nama penanda tangan.** Setiap slot terikat ke akun:
+- **Pembuat dokumen** — akun yang membuat draf, dengan PIN-nya sendiri. Slip tutup kasir hanya bisa dibuat oleh kasir yang melakukan closing hari itu (atau Owner).
+- **Owner** — akun Owner mana pun yang sedang login, dengan PIN-nya sendiri.
+
+Owner dapat mengubah label slot dan siapa yang menandatanganinya (Pembuat/Owner) di **Dokumen resmi → Template → Ubah**.
 
 Anda boleh mendesain ulang template langsung di Google Docs: font, kop surat, tata letak, dan logo. Setelah itu buka **Dokumen Resmi → tab Template → Pindai Ulang**. Bidang isian baru otomatis menjadi form. Tombol **Edit di Google** membuka templatenya langsung.
 
@@ -316,9 +384,12 @@ Format penanda yang dikenali:
 
 ### Alur
 **Draf → Menunggu TTD → Terbit** (atau **Ditarik**).
-- Setiap penanda tangan menyetujui dengan **sesi login + PIN** sesuai urutan slot.
-- Owner dapat **melewati** slot dengan alasan wajib, yang tercatat di riwayat.
-- Saat terbit, server memberi nomor surat, membuat PDF ber-QR di Drive, dan menghitung sidik jari **SHA-256**.
+- Setiap penanda tangan menyetujui dengan **sesi login + PIN** sesuai urutan slot. Bila Owner mengaktifkan *PIN tanda tangan terpisah*, yang diminta adalah PIN tanda tangan.
+- Owner dapat **melewati** slot dengan alasan wajib, yang tercatat di riwayat dan di dokumen ("atas nama").
+- Saat tanda tangan terakhir, server memberi nomor surat dan kode verifikasi. **PDF ber-QR dibuat di latar** (sekitar 10 detik) sehingga Anda tidak perlu menunggu; daftar dokumen menulis "PDF sedang disiapkan" sampai selesai. Bila HP terputus, server menyelesaikannya otomatis dalam beberapa menit.
+- Tombol **Pratinjau** (draf) dan **Lihat & unduh PDF** (terbit) menampilkan PDF di dalam aplikasi sebelum diunduh.
+
+**Anti-pemalsuan.** Angka di slip, nota, berita acara, dan laporan bulanan **selalu dihitung server dari pembukuan**; kasir tidak bisa mengetik angkanya. Saat diajukan, server menyimpan sidik data. Bila pembukuan berubah sebelum semua tanda tangan selesai, tanda tangan diulang dari awal dengan angka terbaru. Bila berubah setelah terbit (koreksi Owner), dokumen tetap sah sebagai bukti saat terbit tetapi diberi tanda **Dikoreksi** di aplikasi dan di halaman verifikasi.
 
 ### URL publik untuk QR (penting)
 QR berisi tautan ke `verify.html` di situs GitHub Pages Anda. Isi alamatnya sekali di **Pengaturan → Identitas & Logo → URL publik aplikasi**, misalnya `https://USERNAME.github.io/rempah-pelaut/`.
@@ -327,7 +398,7 @@ Bila belum diisi, aplikasi mengisinya otomatis pada penandatanganan pertama dari
 
 Halaman verifikasi:
 - dapat dibuka siapa saja tanpa login;
-- menampilkan status **ASLI & BERLAKU** atau **DITARIK**;
+- menampilkan status **Asli & berlaku**, **Asli, data sudah dikoreksi** (beserta riwayat koreksinya), atau **Ditarik, tidak berlaku**;
 - dapat mencocokkan berkas PDF yang diterima. Sidik jari dihitung di perangkat pemeriksa, jadi berkas tidak diunggah ke mana pun.
 
 ---
@@ -415,7 +486,7 @@ Pilih nama fungsi di dropdown editor, lalu klik **▶ Run**.
 | Fungsi | Kegunaan |
 |---|---|
 | `setupAplikasi` | Pemasangan awal. Aman diulang |
-| `perbaruiSkema` | Menambah sheet/kolom baru setelah update (aditif) |
+| `perbaruiSkema` | Menambah sheet/kolom baru setelah update (aditif), serta mengganti tema bawaan v1.0 ke tampilan v1.1 bila belum pernah diubah |
 | `cekPerforma` | Status cache, trigger, dan ukuran Script Properties |
 | `matikanKeepWarm` / `nyalakanKeepWarm` | Mematikan/menyalakan pemanasan server |
 | `installTriggers` | Memasang ulang trigger bila terhapus |
@@ -427,7 +498,9 @@ Pilih nama fungsi di dropdown editor, lalu klik **▶ Run**.
 
 ## 15. Batasan yang perlu diketahui
 
-- **Tanda tangan dokumen memakai sesi login + PIN**, bukan login Google per pejabat, karena kasir dan owner masuk dengan PIN. Setiap tanda tangan tetap tercatat lengkap (siapa, kapan, metode) dan dicek server.
+- **Tanda tangan dokumen memakai sesi login + PIN** (atau PIN tanda tangan terpisah), bukan login Google per pejabat, karena kasir dan owner masuk dengan PIN. Setiap tanda tangan tetap tercatat lengkap (siapa, kapan, metode) dan dicek server.
+- **Pengguna tidak dihapus**, hanya dinonaktifkan, agar nama di riwayat transaksi dan dokumen tetap jelas.
+- **Data yang dibatalkan tidak hilang.** Ia tetap tersimpan di sheet dengan status *BATAL* beserta alasannya, dan tetap tampil di daftar dengan tanda *Dibatalkan*.
 - **Penerbitan dokumen massal** (antrean `DE_Antrean`) belum diaktifkan. Dokumen diterbitkan satu per satu.
 - **Template Google Slides** didukung untuk isian biasa, tetapi baris berulang `{{#BLOK}}` hanya untuk Google Docs dan Sheets.
 - **Dokumen demo** dibuat sebelum alamat GitHub Pages diketahui, sehingga QR-nya memakai alamat relatif. Dokumen baru setelah URL publik diisi memakai alamat lengkap. Dokumen demo ikut terhapus saat **Mulai Data Riil**.
@@ -452,6 +525,67 @@ Pilih nama fungsi di dropdown editor, lalu klik **▶ Run**.
 | `Password authentication is not supported` saat `git push` | GitHub tidak menerima sandi akun | Gunakan Personal Access Token (bagian C5) |
 | Halaman masih versi lama | Cache browser | **Ctrl+Shift+R**, atau buka di jendela Incognito |
 | QR dokumen membuka alamat yang salah | URL publik belum diisi atau salah | Isi di **Pengaturan → Identitas → URL publik** |
+| Pita "versi server berbeda" | Frontend dan backend tidak sama versinya | Ulangi bagian 0a (Deploy → **Edit → New version**) |
+| Tombol + di POS mati | Hari ini sudah Daily closing | Benar sesuai aturan. Transaksi susulan dicatat Owner lewat **Catat transaksi susulan** |
+| Diminta PIN saat membatalkan/mengubah data | Aksi itu dicentang di **Keamanan & PIN → Aksi yang meminta PIN ulang** | Masukkan PIN, atau Owner menghapus centangnya |
+| "Anda belum membuat PIN tanda tangan" | Owner mengaktifkan PIN tanda tangan terpisah | Menu akun → **Buat PIN tanda tangan** |
+| Transaksi berstatus **Gagal** | Server menolak data (mis. hari sudah closing) | Menu akun → **Status sinkron** → lihat alasannya, lalu **Coba lagi** atau **Buang** (bagian 18) |
+| Tampilan masih versi lama setelah update | Aplikasi lama masih terbuka di tab lain | Tutup semua tab aplikasi, buka lagi, tekan **Ctrl+Shift+R** |
+| Muncul "PDF sedang disiapkan" lama | Pembuatan PDF di latar terputus | Buka dokumennya → **Siapkan PDF** |
+
+---
+
+## 17. Pembatalan, koreksi & aturan PIN (v1.1)
+
+### Batalkan (void), bukan hapus
+Setiap daftar data punya kotak centang. Centang satu atau beberapa baris → muncul bilah aksi → **Batalkan** → tulis alasan.
+Data yang dibatalkan **tetap tersimpan** dengan tanda *Dibatalkan*, alasan, nama pembatal, dan waktu, lalu **tidak dihitung** di omset, saldo, stok, maupun laporan.
+
+| Data | Kasir | Owner |
+|---|---|---|
+| Transaksi POS & pengeluaran | Hanya miliknya sendiri, **hari ini**, **sebelum closing**, dan hanya bila aturan *Boleh membatalkan transaksi sendiri* aktif | Semua, termasuk hari yang sudah closing (dengan alasan koreksi) |
+| Nota belanja, stok opname | Tidak punya akses (kecuali diberi akses halaman) | Semua. Membatalkan nota mengurangi stok lagi; membatalkan opname mengembalikan stok sistem |
+| Menu, bahan, aset | — | Menu yang sudah pernah terjual hanya dinonaktifkan; bahan diarsipkan; aset dihapus dari daftar aktif. Semua bisa dipulihkan |
+| Draf dokumen | Draf miliknya | Semua draf. Dokumen yang sudah terbit tidak dihapus, hanya bisa **ditarik** |
+
+Server memeriksa ulang semua aturan ini, jadi tidak bisa diakali dari HP kasir.
+
+### Koreksi hari yang sudah closing (Owner)
+Buka **Rekap kas** → baris tanggalnya → **Transaksi** atau **Biaya** → ubah atau batalkan → tulis alasan koreksi saat diminta.
+- Hari itu **tetap terkunci**; kasir tetap tidak bisa menambah data.
+- Saldo hari itu dan **semua hari sesudahnya** dihitung ulang otomatis.
+- Slip tutup kasir yang sudah terbit untuk tanggal itu diberi tanda **Dikoreksi** (siapa, kapan, alasan). Halaman verifikasinya menyatakan "Asli, data sudah dikoreksi".
+- Tombol 🔓 (buka kunci) tetap ada bila kasir perlu mencatat sendiri transaksi yang terlewat.
+
+### Aturan PIN (Pengaturan → Keamanan & PIN)
+| Pengaturan | Bawaan | Keterangan |
+|---|---|---|
+| Panjang PIN | 6 digit | 4–8. Pengguna yang PIN-nya beda panjang tetap bisa login dengan PIN lama, lalu langsung diminta membuat PIN baru |
+| Batas salah PIN | 5 kali | Lalu dikunci selama *lama dikunci* (bawaan 15 menit) |
+| Lama sesi | 14 jam | Setelah itu wajib login ulang |
+| Kunci layar otomatis | 0 (mati) | Layar terkunci setelah sekian menit tanpa aktivitas; buka dengan PIN |
+| Tolak PIN lemah | Aktif | 111111, 123456, 654321, 121212, dan pola mudah lainnya ditolak |
+| Wajib ganti PIN | 0 (tidak wajib) | Mis. 90 hari |
+| Aksi yang meminta PIN ulang | Batal, ubah transaksi, buka kunci closing, tarik dokumen, reset PIN | Owner bebas menambah/mengurangi. Tanda tangan dokumen, mengubah aturan PIN, dan Mulai data riil **selalu** meminta PIN |
+| PIN tanda tangan terpisah | Mati | Bila aktif, setiap pengguna membuat PIN khusus tanda tangan dari menu akun. Owner bisa menghapusnya di **Pengguna & PIN** bila pengguna lupa |
+
+---
+
+## 18. Status sinkron: Pending, Berhasil, Gagal
+
+Transaksi POS dan pengeluaran yang disimpan saat sinyal hilang tetap tersimpan di HP:
+
+| Status | Arti | Yang perlu dilakukan |
+|---|---|---|
+| **Pending** | Tersimpan di HP, belum sampai ke server | Tidak perlu apa-apa. Dikirim otomatis begitu sinyal kembali |
+| **Berhasil** | Sudah tercatat di Google Sheets | — |
+| **Gagal** | Server menolak (mis. hari sudah closing, menu nonaktif) | Menu akun → **Status sinkron** → baca alasannya → **Coba lagi** atau **Buang** |
+
+Pilihan lain di menu akun:
+- **Tes koneksi server** — memeriksa alamat `/exec`, versi server, dan lama respons.
+- **Uji mode offline** — mensimulasikan sinyal hilang untuk latihan.
+
+Daily closing menolak dijalankan selama masih ada data Pending/Gagal, agar tidak ada transaksi yang tertinggal.
 
 ---
 

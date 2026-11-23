@@ -3,57 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Verifikasi Dokumen — Minuman Rempah Pelaut</title>
-  <meta name="theme-color" content="#F5EBD7">
+  <title>Verifikasi dokumen</title>
+  <meta name="theme-color" content="#F6F1E7">
   <meta name="robots" content="noindex">
   <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;600;700&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=1.0.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css?v=1.1.0">
 </head>
 <body>
   <div id="topline" class="topline"></div><div id="toasts" class="toasts"></div>
-  <div class="login" style="justify-content:flex-start">
-    <div class="login-top"><div class="row"><img src="assets/logo.svg" alt="" style="width:44px;height:44px;border-radius:50%"><div><div class="eyebrow" style="color:var(--c-secondary)" id="inst">Minuman Rempah Pelaut</div><div class="small muted">Layanan verifikasi dokumen resmi</div></div></div></div>
-    <div class="card login-card" style="width:min(640px,100%)" id="hasil">
-      <div class="center"><div class="loader-art" style="margin:0 auto"><div class="ring"></div><div class="ring r2"></div></div><div class="loader-text mt-12">Memeriksa keaslian dokumen…</div></div>
+  <main class="login" style="justify-content:flex-start">
+    <div class="login-top"><div class="row"><img src="assets/logo.svg" alt="" id="logo" style="width:40px;height:40px;border-radius:50%" onerror="this.src='assets/logo.svg'"><div><b id="inst">Verifikasi dokumen</b><div class="small muted">Cek keaslian dokumen resmi</div></div></div></div>
+    <div class="card login-card" style="width:min(640px,100%)" id="hasil" aria-live="polite">
+      <div class="row gap-12" style="justify-content:center"><div class="loader-art"><div class="ring"></div></div><div class="small muted">Memeriksa dokumen…</div></div>
     </div>
     <div class="card login-card" style="width:min(640px,100%);margin-top:0" id="hash-card" hidden>
       <h3>Cocokkan berkas PDF</h3>
-      <p class="small muted mt-4">Pilih berkas PDF yang Anda terima. Sidik jari SHA-256 dihitung di perangkat Anda (berkas tidak diunggah) lalu dibandingkan dengan catatan resmi.</p>
-      <input type="file" accept="application/pdf" id="pdf" class="input mt-12">
+      <p class="small muted mt-4">Pilih berkas PDF yang Anda terima. Sidiknya dihitung di perangkat Anda (berkas tidak diunggah ke mana pun) lalu dibandingkan dengan catatan resmi.</p>
+      <input type="file" accept="application/pdf" id="pdf" class="input mt-12" aria-label="Pilih berkas PDF">
       <div id="hash-hasil" class="mt-12"></div>
     </div>
-    <div class="login-foot"><span>Verifikasi tanpa login • data dibaca langsung dari server resmi</span></div>
-  </div>
-  <script src="js/config.js?v=1.0.0"></script>
-  <script src="js/core.js?v=1.0.0"></script>
+    <div class="login-foot"><span>Tanpa login · data dibaca langsung dari server pembukuan</span></div>
+  </main>
+  <script src="js/config.js?v=1.1.0"></script>
+  <script src="js/core.js?v=1.1.0"></script>
   <script>
   (async function () {
     const p = new URLSearchParams(location.search), k = p.get('k') || '', s = p.get('s') || '';
     const box = $('#hasil');
-    const gagal = (judul, teks) => { box.innerHTML = `<div class="center"><div class="icon-box danger" style="margin:0 auto;width:72px;height:72px;border-radius:50%">${ic('x', 'xl')}</div><h1 class="mt-12" style="font-size:26px">${esc(judul)}</h1><p class="muted mt-8">${esc(teks)}</p></div>`; };
-    if (!k) return gagal('Kode tidak ada', 'Pindai kode QR pada dokumen atau buka tautan verifikasi lengkap.');
+    const kepala = (cls, ikon, label, judul, sub) => `<div class="row top gap-12"><span class="icon-box ${cls}" style="width:48px;height:48px">${ic(ikon)}</span><div class="grow"><span class="badge ${cls}">${esc(label)}</span><h1 class="mt-8" style="font-size:22px">${esc(judul)}</h1>${sub ? `<p class="muted small mt-4">${esc(sub)}</p>` : ''}</div></div>`;
+    const gagal = (judul, teks) => { box.innerHTML = kepala('danger', 'x', 'Tidak dapat diverifikasi', judul, teks); };
+    if (!k) return gagal('Kode verifikasi tidak ada', 'Pindai kode QR pada dokumen atau buka tautan verifikasi lengkap.');
     if (!API.siap()) return gagal('Layanan belum dikonfigurasi', 'Alamat server belum diisi pada aplikasi ini.');
     try {
-      const res = await fetch(API.url + '?action=dok.verifikasi&k=' + encodeURIComponent(k) + '&s=' + encodeURIComponent(s));
+      const res = await fetch(API.url + '?action=dok.verifikasi&k=' + encodeURIComponent(k) + '&s=' + encodeURIComponent(s), { redirect: 'follow' });
       const r = await res.json();
-      if (!r.success) return gagal(r.code === 'SIG' ? 'Tautan tidak sah' : 'Dokumen tidak ditemukan', r.message);
+      if (!r.success) return gagal(r.code === 'SIG' ? 'Tautan verifikasi tidak sah' : 'Dokumen tidak ditemukan', r.message);
       const d = r.data;
-      if (d.institusi) { $('#inst').textContent = d.institusi.nama; document.title = 'Verifikasi — ' + d.institusi.nama; }
-      box.innerHTML = `<div class="center"><div class="icon-box ${d.valid ? 'success' : 'danger'}" style="margin:0 auto;width:78px;height:78px;border-radius:50%">${ic(d.valid ? 'check' : 'x', 'xl')}</div>
-        <span class="badge ${d.valid ? 'success' : 'danger'} mt-12">${d.valid ? 'ASLI & BERLAKU' : 'DITARIK — TIDAK BERLAKU'}</span>
-        <h1 class="mt-12" style="font-size:24px">${esc(d.judul)}</h1><p class="muted">${esc(d.jenis)}</p></div>
-        <div class="inset mt-16">${[['Nomor dokumen', d.nomor], ['Diterbitkan', tgl(d.terbit, 'EEEE, d MMMM yyyy • HH:mm') + ' WITA']].concat(d.ringkas.map((x) => [x.label, x.nilai])).map((x) => `<div class="sum-row"><span class="muted small">${esc(x[0])}</span><span class="v small">${esc(x[1])}</span></div>`).join('')}</div>
-        ${d.catatan ? `<div class="notice danger mt-12">${ic('alert')}<div class="small">${esc(d.catatan)}</div></div>` : ''}
-        <div class="eyebrow mt-16 mb-8">Ditandatangani secara elektronik oleh</div>
-        ${d.penandatangan.map((x) => `<div class="sig"><span class="icon-box s success">${ic('sign', 'sm')}</span><div class="grow"><b class="small">${esc(x.nama)}</b><div class="xs muted">${esc(x.label)} • ${esc(x.jabatan)}</div></div><div class="xs muted right">${esc(tgl(x.waktu, 'd MMM yyyy HH:mm'))}<div>${esc(x.metode === 'BYPASS' ? 'Bypass Owner' : 'Sesi + PIN')}</div></div></div>`).join('')}
-        <div class="xs muted mt-16">Sidik jari SHA-256 PDF resmi:</div><div class="id" style="word-break:break-all">${esc(d.hashPdf)}</div>`;
+      if (d.institusi) { $('#inst').textContent = d.institusi.nama; document.title = 'Verifikasi dokumen · ' + d.institusi.nama; if (d.institusi.logo) $('#logo').src = d.institusi.logo; }
+      const kor = d.koreksi || [];
+      const status = !d.valid ? ['danger', 'ban', 'Ditarik, tidak berlaku', 'Dokumen ini sudah ditarik penerbitnya.'] : (d.dataBerubah || kor.length) ? ['warning', 'alert', 'Asli, data sudah dikoreksi', 'Dokumen ini benar diterbitkan, tetapi angka pembukuannya diperbaiki setelah terbit. Minta salinan terbaru bila Anda memerlukan angka akhir.'] : ['success', 'check', 'Asli & berlaku', 'Dokumen ini diterbitkan dan ditandatangani melalui sistem pembukuan resmi.'];
+      box.innerHTML = `${kepala(status[0], status[1], status[2], d.judul, status[3])}
+        <div class="inset mt-16">${[['Jenis', d.jenis], ['Nomor', d.nomor], ['Diterbitkan', tgl(d.terbit, 'EEEE, d MMMM yyyy, HH:mm')]].concat((d.ringkas || []).map((x) => [x.label, x.nilai])).map((x) => `<div class="sum-row"><span class="muted small">${esc(x[0])}</span><span class="v small">${esc(x[1])}</span></div>`).join('')}</div>
+        ${d.catatan ? `<div class="notice ${d.valid ? '' : 'danger'} mt-12">${ic('info')}<div class="small">${esc(d.catatan)}</div></div>` : ''}
+        ${kor.length ? `<div class="notice mt-12">${ic('alert')}<div class="small"><b>Riwayat koreksi setelah terbit</b><ul>${kor.slice(-5).map((x) => `<li>${esc(tgl(x.waktu, 'd MMM yyyy HH:mm'))} · ${esc(x.oleh || '')}: ${esc(x.alasan || '')}</li>`).join('')}</ul></div></div>` : d.dataBerubah ? `<div class="notice mt-12">${ic('alert')}<div class="small">${esc(d.sebabBerubah || 'Angka pada dokumen tidak lagi sama dengan pembukuan terkini.')}</div></div>` : ''}
+        <h3 class="mt-16 mb-8">Ditandatangani oleh</h3>
+        ${(d.penandatangan || []).map((x) => `<div class="sig"><span class="icon-box s success">${ic('sign', 'sm')}</span><div class="grow"><b class="small">${esc(x.nama)}</b><div class="xs muted">${esc(x.label)}${x.jabatan ? ' · ' + esc(x.jabatan) : ''}${x.atasNama ? ' · atas nama ' + esc(x.atasNama) : ''}</div></div><div class="xs muted" style="text-align:right">${esc(tgl(x.waktu, 'd MMM yyyy HH:mm'))}<div>${x.metode === 'BYPASS' ? 'Bypass Owner' : 'PIN akun'}</div></div></div>`).join('') || '<div class="xs muted">Tanpa tanda tangan.</div>'}
+        ${d.hashPdf ? `<div class="xs muted mt-16">Sidik PDF resmi (SHA-256)</div><div class="id" style="word-break:break-all">${esc(d.hashPdf)}</div>` : '<p class="xs muted mt-16">Berkas PDF resmi sedang disiapkan. Pencocokan berkas tersedia beberapa saat lagi.</p>'}`;
       if (d.hashPdf) {
         $('#hash-card').hidden = false;
         $('#pdf').onchange = async (e) => {
           const f = e.target.files[0]; if (!f) return;
           const buf = await f.arrayBuffer(); const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf))).map((b) => b.toString(16).padStart(2, '0')).join('');
-          $('#hash-hasil').innerHTML = h === d.hashPdf ? `<div class="notice success">${ic('check-c')}<div><b>Berkas identik dengan PDF resmi.</b><div class="xs id">${h}</div></div></div>` : `<div class="notice danger">${ic('alert')}<div><b>Berkas BERBEDA dari PDF resmi.</b><div class="small">Kemungkinan telah diubah atau bukan berkas asli.</div><div class="xs id">${h}</div></div></div>`;
+          $('#hash-hasil').innerHTML = h === d.hashPdf ? `<div class="notice success">${ic('check-c')}<div><b>Berkas sama persis dengan PDF resmi.</b><div class="xs id">${h}</div></div></div>` : `<div class="notice danger">${ic('alert')}<div><b>Berkas berbeda dari PDF resmi.</b><div class="small">Berkas mungkin sudah diubah atau bukan berkas asli dari penerbit.</div><div class="xs id">${h}</div></div></div>`;
         };
       }
     } catch (e) { gagal('Gagal terhubung', 'Periksa koneksi internet lalu muat ulang halaman.'); }

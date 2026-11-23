@@ -12,8 +12,22 @@ function posTip(el, tip, x, y) {
   let lx = x + 14; if (lx + tw > w) lx = x - tw - 14; if (lx < 0) lx = 4;
   tip.style.left = lx + 'px'; tip.style.top = Math.max(0, y - th / 2) + 'px';
 }
+/* Animasi grafik hanya sekali per elemen per halaman dalam satu sesi.
+   Render ulang (data segar dari server, ganti rentang, ubah ukuran layar) langsung tampil tanpa animasi,
+   sehingga tidak ada "kedip" ketika data cache diganti data terbaru. */
+const Gerak = {
+  kunci: new Set(),
+  diam: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+  boleh(el, nama) {
+    if (this.diam()) return false;
+    const k = (location.hash.split('?')[0] || '#/') + '|' + (nama || (el && el.id) || '');
+    if (!nama && !(el && el.id)) return true;
+    if (this.kunci.has(k)) return false;
+    this.kunci.add(k); return true;
+  }
+};
 function amatiUkuran(el, draw) {
-  let w = el.clientWidth; draw();
+  let w = el.clientWidth; draw(!Gerak.boleh(el));
   if (el._ro) el._ro.disconnect();
   el._ro = new ResizeObserver(debounce(() => { if (Math.abs(el.clientWidth - w) > 8) { w = el.clientWidth; draw(true); } }, 120));
   el._ro.observe(el);
@@ -124,7 +138,7 @@ function grafikDonat(el, cfg) {
     a0 = a1;
   });
   el.style.width = S + 'px';
-  el.innerHTML = `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="${esc(cfg.aria || 'Grafik donat')}"><circle cx="${S / 2}" cy="${S / 2}" r="${R}" fill="none" stroke="var(--c-inset)" stroke-width="${sw}"/><g style="transform-origin:center;animation:muncul .7s var(--ease-spring)">${p}</g></svg>${cfg.center ? `<div class="donut-center"><div><div class="v">${esc(cfg.center.v)}</div><div class="l">${esc(cfg.center.l)}</div></div></div>` : ''}`;
+  el.innerHTML = `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="${esc(cfg.aria || 'Grafik donat')}"><circle cx="${S / 2}" cy="${S / 2}" r="${R}" fill="none" stroke="var(--c-inset)" stroke-width="${sw}"/><g style="transform-origin:center;${Gerak.boleh(el) ? 'animation:muncul .5s var(--ease)' : ''}">${p}</g></svg>${cfg.center ? `<div class="donut-center"><div><div class="v">${esc(cfg.center.v)}</div><div class="l">${esc(cfg.center.l)}</div></div></div>` : ''}`;
   const tip = tipEl(el);
   $$('path', el).forEach((pa) => {
     const it = cfg.items[+pa.dataset.i];
@@ -142,7 +156,15 @@ function hbarHTML(items, opt = {}) {
   const max = Math.max(1, ...items.map((x) => x.value));
   return `<div class="hbar">${items.map((it, i) => `<div class="r"><div class="nm">${it.foto ? `<img class="thumb s" src="${esc(it.foto)}" alt="" loading="lazy">` : `<i class="sw" style="background:${it.color || opt.color || 'var(--s1)'}"></i>`}<span class="truncate">${esc(it.name)}</span>${it.badge || ''}</div><div class="v">${esc((opt.fmt || fmtNum)(it.value))}${it.sub ? ` <span class="xs">${esc(it.sub)}</span>` : ''}</div><div class="track"><i data-w="${(it.value / max * 100).toFixed(1)}" style="background:${it.color || opt.color || 'var(--s1)'}"></i></div></div>`).join('')}</div>`;
 }
-function animasiBatang(root) { requestAnimationFrame(() => setTimeout(() => $$('.track i[data-w], .meter > i[data-w]', root).forEach((i) => { i.style.width = i.dataset.w + '%'; }), 60)); }
+function animasiBatang(root) {
+  const el = $$('.track i[data-w], .meter > i[data-w]', root); if (!el.length) return;
+  if (!Gerak.boleh(null, 'batang|' + (root.id || root.className || ''))) {   // render ulang: langsung ke ukuran akhir, tanpa transisi
+    el.forEach((i) => { i.style.transition = 'none'; i.style.width = Math.max(0, Math.min(100, +i.dataset.w || 0)) + '%'; });
+    requestAnimationFrame(() => el.forEach((i) => { i.style.transition = ''; }));
+    return;
+  }
+  requestAnimationFrame(() => setTimeout(() => el.forEach((i) => { i.style.width = Math.max(0, Math.min(100, +i.dataset.w || 0)) + '%'; }), 40));
+}
 /* ---------- Batang tersegmen (satu keseluruhan dibagi bagian) ---------- */
 function segbarHTML(items, fmt = fmtNum) {
   const t = items.reduce((a, x) => a + Math.max(0, x.value), 0) || 1;
