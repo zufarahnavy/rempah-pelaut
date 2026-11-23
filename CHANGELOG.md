@@ -1,5 +1,33 @@
 # Catatan perubahan
 
+## 1.2.0 — 24 November 2026
+
+**Hanya frontend.** Backend tetap 1.1.0 (tidak perlu mengganti berkas `.gs`, menjalankan `perbaruiSkema`, atau deploy ulang). Logika bisnis, rumus kas, struktur data, variabel state, dan sinkronisasi ke Apps Script tidak diubah.
+
+**Tampilan (Clean SaaS dashboard)**
+- Token baru: latar `#F8FAFC`, kartu `#FFFFFF` bergaris `#E2E8F0`, sudut 16 px, bayangan `0 1px 3px rgba(0,0,0,.04)`, aksen `#059669` / `#047857`, teks `#0F172A` / `#64748B`, huruf Plus Jakarta Sans.
+- Sidebar: logo baru (jangkar + daun rempah), menu aktif berupa kapsul hijau muda dengan garis penanda, penghitung merah untuk stok menipis & dokumen menunggu.
+- Header: pencarian global dengan pintasan **Ctrl K** / ⌘ K, lonceng dengan titik merah, chip profil dengan avatar inisial.
+- HP: navigasi bawah berupa kapsul mengambang; sidebar menjadi laci; dialog membuka dari bawah.
+- Kartu metrik: angka besar menghitung naik, status persen, dan sparkline hijau dengan area gradien (dasbor, beranda kasir, rekap kas, analitik). Deret diambil dari data yang sudah dimuat, tanpa panggilan server tambahan.
+- Tab & filter berupa kapsul dengan penanda yang bergeser, tanpa kedip.
+- Palet grafik baru yang lolos uji buta warna; grafik laba-rugi memakai hijau (laba) dan merah (rugi).
+- Ikon aplikasi (PWA) dan warna bilah browser diperbarui.
+
+**Animasi (CSS `transform` + `opacity`, tanpa pustaka luar)**
+- `pageEnter`: halaman masuk dengan pudar + geser 8 px, 0,25 detik, kurva `cubic-bezier(.16,1,.3,1)`. Memakai `backwards` agar elemen tetap (bar keranjang POS) tidak ikut tergeser setelah animasi.
+- Kartu terangkat 2 px saat diarahkan kursor (0,2 detik).
+- Dialog: latar `rgba(15,23,42,.4)` + blur 4 px, kotak membesar dari 96%.
+- Utilitas baru `animateValue(el, awal, akhir, durasi = 800)` di `js/gerak.js` (requestAnimationFrame, ease-out cubic, format `id-ID`, awalan "Rp" dipertahankan).
+
+**Kompatibilitas**
+- Bekerja dengan backend 1.1.x. Pita "versi server berbeda" hanya muncul bila backend lebih lama dari 1.1.
+- Tema bawaan lama (v1.0 dan v1.1) otomatis tampil dengan warna baru tanpa mengubah spreadsheet. Tema yang sudah diatur sendiri tetap dipakai. Preset baru **Hijau rempah (bawaan)** di Pengaturan → Warna & font; slider sudut kini 6–20 px.
+- Nama menu: Penjualan (POS) → Kasir (POS), Pengeluaran lapak → Biaya lapak, Stok & opname → Stok bahan, Aset & inventaris → Aset inventaris. Alamat halaman tetap.
+
+**Perbaikan**
+- Garis pembanding "periode sebelumnya" di Analitik kini benar-benar putus-putus (sebelumnya tertimpa animasi gambar garis).
+
 ## 1.1.0 — 23 November 2026
 
 **Tampilan**

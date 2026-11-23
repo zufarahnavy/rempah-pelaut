@@ -25,8 +25,8 @@ const Param = {
 
 const NAV = [
   { grp: 'Harian', items: [{ k: 'beranda', l: 'Beranda', i: 'home' }, { k: 'dashboard', l: 'Dashboard', i: 'grid' }, { k: 'analitik', l: 'Analitik penjualan', i: 'chart' }] },
-  { grp: 'Kasir', items: [{ k: 'pos', l: 'Penjualan (POS)', i: 'pos' }, { k: 'biaya', l: 'Pengeluaran lapak', i: 'receipt' }, { k: 'closing', l: 'Daily closing', i: 'lock' }] },
-  { grp: 'Gudang & kas', items: [{ k: 'belanja', l: 'Belanja bahan', i: 'bag' }, { k: 'stok', l: 'Stok & opname', i: 'box' }, { k: 'aset', l: 'Aset & inventaris', i: 'stall' }, { k: 'rekap', l: 'Rekap kas', i: 'book' }, { k: 'laporan', l: 'Laporan & unduh', i: 'file' }] },
+  { grp: 'Kasir', items: [{ k: 'pos', l: 'Kasir (POS)', i: 'pos' }, { k: 'biaya', l: 'Biaya lapak', i: 'receipt' }, { k: 'closing', l: 'Daily closing', i: 'lock' }] },
+  { grp: 'Gudang & kas', items: [{ k: 'belanja', l: 'Belanja bahan', i: 'bag' }, { k: 'stok', l: 'Stok bahan', i: 'box' }, { k: 'aset', l: 'Aset inventaris', i: 'stall' }, { k: 'rekap', l: 'Rekap kas', i: 'book' }, { k: 'laporan', l: 'Laporan & unduh', i: 'file' }] },
   { grp: 'Administrasi', items: [{ k: 'dokumen', l: 'Dokumen resmi', i: 'doc' }, { k: 'menu', l: 'Master menu', i: 'cup' }, { k: 'pengguna', l: 'Pengguna & PIN', i: 'users' }, { k: 'pengaturan', l: 'Pengaturan', i: 'settings' }] }
 ];
 const bolehNav = (k) => !!Pages[k] && (Pages[k].izin ? Pages[k].izin() : Store.punya(k));
@@ -42,7 +42,10 @@ const App = {
     document.addEventListener('antrean', () => this.updateBanner());
     document.addEventListener('server', () => this.updateNet());
     document.addEventListener('versi', () => this.updateBanner());
-    addEventListener('keydown', (e) => { if (e.key === 'F2' && API.token && Store.punya('pos')) { e.preventDefault(); location.hash = '#/pos'; } });
+    addEventListener('keydown', (e) => {
+      if (e.key === 'F2' && API.token && Store.punya('pos')) { e.preventDefault(); location.hash = '#/pos'; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K') && API.token) { const s = $('#gsearch input'); if (s && s.offsetParent) { e.preventDefault(); s.focus(); s.select(); } }   // Ctrl K → pencarian global
+    });
     Kunci.pasang();
     const cached = (() => { try { return JSON.parse(localStorage.getItem('rp:boot') || 'null'); } catch (e) { return null; } })();
     if (API.token && cached && cached.me) {
@@ -189,7 +192,7 @@ const App = {
         <div id="banner"></div>
         <header class="topbar">
           <button class="btn ghost icon-only burger" id="burger" aria-label="Menu">${ic('menu')}</button>
-          <div class="search pos-rel" id="gsearch">${ic('search')}<input class="input" placeholder="Cari menu, transaksi, nota, bahan, aset…" aria-label="Pencarian"></div>
+          <div class="search pos-rel" id="gsearch">${ic('search')}<input class="input" placeholder="Cari menu, transaksi, nota, bahan…" aria-label="Pencarian (Ctrl K)"><span class="kbd">${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K'}</span></div>
           <div class="grow"></div>
           ${Store.demo ? `<a class="badge warning hide-m" href="#/pengaturan?tab=data" title="Data demo aktif">Data demo</a>` : ''}
           ${Store.punya('belanja') ? `<a class="btn hide-m" href="#/belanja">${ic('bag', 'sm')}Catat belanja</a>` : ''}
@@ -277,7 +280,7 @@ const App = {
     const b = $('#banner'); if (!b) return;
     const q = Antrean.jumlah(), sv = API.versiServer;
     let h = '';
-    if (sv && sv !== VERSI_APP) h += `<div class="banner">${ic('alert', 'sm')}<div class="grow"><b>Versi server (${esc(sv)}) berbeda dengan tampilan (${esc(VERSI_APP)}).</b> ${Store.owner() ? 'Perbarui berkas .gs lalu Deploy → Manage deployments → Edit → New version.' : 'Beberapa fitur mungkin belum berjalan — beri tahu Owner.'}</div></div>`;
+    if (sv && !serverCocok(sv)) h += `<div class="banner">${ic('alert', 'sm')}<div class="grow"><b>Tampilan v${esc(VERSI_APP)} membutuhkan server v${VERSI_API_MIN} atau lebih baru (server: v${esc(sv)}).</b> ${Store.owner() ? 'Perbarui berkas .gs lalu Deploy → Manage deployments → Edit → New version.' : 'Beberapa fitur mungkin belum berjalan — beri tahu Owner.'}</div></div>`;
     if (q.pending || q.gagal) h += `<div class="banner">${ic(q.gagal ? 'alert' : 'cloud', 'sm')}<div class="grow"><b>${q.pending ? q.pending + ' data Pending' : ''}${q.pending && q.gagal ? ', ' : ''}${q.gagal ? q.gagal + ' data Gagal' : ''}</b> — ${q.gagal ? 'ditolak server, perlu ditinjau.' : 'tersimpan di perangkat, belum terkirim ke Google Sheets.'}</div><button class="btn xs" id="lihat-sync">Lihat</button>${Net.up && q.pending ? `<button class="btn xs dark" id="sync-now">${Antrean.busy ? '<span class="spin"></span>' : ic('refresh', 'sm')}Kirim sekarang</button>` : ''}</div>`;
     else if (!Net.up) h += `<div class="banner">${ic('wifi-off', 'sm')}<div class="grow"><b>Perangkat offline.</b> Penjualan & biaya tetap bisa dicatat sebagai Pending, lalu dikirim otomatis saat sinyal kembali.</div></div>`;
     b.innerHTML = h;

@@ -124,6 +124,7 @@ Pages.pengguna = {
 
 /* ============================== PENGATURAN ============================== */
 const PRESET_TEMA = [
+  { n: 'Hijau rempah (bawaan)', t: { primary: '#059669', primaryHover: '#047857', secondary: '#0F172A', bg: '#F8FAFC', card: '#FFFFFF', text: '#0F172A', muted: '#64748B', border: '#E2E8F0', success: '#16A34A', danger: '#DC2626', warning: '#D97706', radius: 16 } },
   { n: 'Kedai hangat', t: { primary: '#A8782A', primaryHover: '#8E6420', secondary: '#5B3E26', bg: '#F6F1E7', card: '#FFFFFF', text: '#2A2118', muted: '#776B5C', border: '#E6DDCC', success: '#2F7A4D', danger: '#B23A2A', warning: '#B7791F' } },
   { n: 'Kopi tubruk', t: { primary: '#8A5A3B', primaryHover: '#714A30', secondary: '#3B2A20', bg: '#F3EEE8', card: '#FFFFFF', text: '#261C16', muted: '#75685E', border: '#E2D8CE', success: '#2F7A4D', danger: '#B23A2A', warning: '#B7791F' } },
   { n: 'Daun pandan', t: { primary: '#4E7A3A', primaryHover: '#3F6430', secondary: '#2F4A26', bg: '#F1F4EC', card: '#FFFFFF', text: '#1E2A1B', muted: '#66705C', border: '#DCE3D2', success: '#2F7A4D', danger: '#B23A2A', warning: '#B7791F' } },
@@ -154,12 +155,12 @@ Pages.pengaturan = {
       $('#logo', isi).onclick = () => { const box = $('#logo', isi); unggahFotoUI('logo', '', async (url) => { box.classList.remove('up'); N().LOGO_URL = url; await App.segarkanBoot(); tabIdentitas(); }, { sebelum: (prev) => { $('img', box).src = prev; box.classList.add('up'); }, gagal: () => box.classList.remove('up') }); };
     };
     const tabTampilan = () => {
-      tema = tema || Object.assign({}, J('TEMA'));
+      tema = tema || Object.assign({}, temaEfektif(J('TEMA')));
       const fj = cfg.fontJudul, fi = cfg.fontIsi;
       isi.innerHTML = `<div class="stack"><div class="card"><div class="card-head"><div><h2>Warna</h2><div class="sub">Perubahan langsung terlihat sebagai pratinjau. Tekan Simpan agar berlaku untuk semua pengguna.</div></div><button class="btn sm" data-act="tema-reset">${ic('refresh', 'sm')}Batalkan perubahan</button></div>
           <div class="grid g-3" style="gap:8px">${PRESET_TEMA.map((p, i) => `<button class="preset" data-preset="${i}"><span class="dots">${['primary', 'secondary', 'bg', 'success', 'danger'].map((k) => `<i style="background:${p.t[k]}"></i>`).join('')}</span><b class="small">${p.n}</b></button>`).join('')}</div>
           <div class="grid g-2 mt-16" style="gap:8px">${Object.keys(LABEL_WARNA).map((k) => `<label class="color-row"><input type="color" data-w="${k}" value="${esc(tema[k] || '#000000')}"><div class="grow"><div class="small strong">${LABEL_WARNA[k]}</div><div class="xs muted tnum" data-wv="${k}">${esc(tema[k] || '')}</div></div></label>`).join('')}</div>
-          <div class="field mt-16" style="max-width:360px"><label>Kelengkungan sudut <span class="hint" id="rv">${tema.radius || 8}px</span></label><input type="range" min="6" max="14" id="radius" value="${Math.max(6, Math.min(14, tema.radius || 8))}" style="accent-color:var(--c-secondary)"></div></div>
+          <div class="field mt-16" style="max-width:360px"><label>Kelengkungan sudut kartu <span class="hint" id="rv">${tema.radius || 16}px</span></label><input type="range" min="6" max="20" id="radius" value="${Math.max(6, Math.min(20, tema.radius || 16))}" style="accent-color:var(--c-primary)"></div></div>
         <div class="card"><div class="card-head"><div><h2>Font</h2><div class="sub">Font judul dan font isi. Satu keluarga font untuk keduanya biasanya paling rapi.</div></div></div>
           <div class="form-grid"><div class="field"><label>Font judul</label><select class="input" id="fj">${cfg.fontJudulOpsi.map((f) => `<option ${f === fj ? 'selected' : ''}>${f}</option>`).join('')}</select></div><div class="field"><label>Font isi</label><select class="input" id="fi">${cfg.fontIsiOpsi.map((f) => `<option ${f === fi ? 'selected' : ''}>${f}</option>`).join('')}</select></div></div>
           <div class="theme-preview mt-16"><h2>${esc(N().APP_NAMA)}</h2><p class="muted small mt-4">Total masuk hari ini <b class="tnum" style="color:var(--c-text)">Rp 1.257.000</b> dari 71 cup.</p><div class="row wrap mt-12 gap-8"><button class="btn primary sm" type="button">Simpan</button><button class="btn sm" type="button">Batal</button><span class="badge success">Terkunci</span><span class="badge warning">Menipis</span><span class="badge danger">Habis</span></div></div>
@@ -240,7 +241,7 @@ Pages.pengaturan = {
       const box = $('#sys', isi); if (!box) return;
       if (!sys || force) { const r = await API.call('sistem.status', {}).catch((e) => ({ success: false, message: e.message })); if (!r.success) { box.innerHTML = kosongHTML(r.message, 'alert'); return; } sys = r.data; }
       const b = sys.baris;
-      box.innerHTML = `<div class="grid g-4 kpis">${[['Versi server', sys.versi + (sys.versi !== VERSI_APP ? ' · aplikasi ' + VERSI_APP : '')], ['Cache server', sys.cacheHangat ? 'Hangat' : 'Dingin'], ['Pemanas otomatis', sys.keepWarm === 'off' ? 'Mati' : 'Aktif'], ['Script Properties', sys.propsKB + ' KB']].map((x) => `<div class="inset"><div class="xs muted">${x[0]}</div><b>${esc(x[1])}</b></div>`).join('')}</div>
+      box.innerHTML = `<div class="grid g-4 kpis">${[['Versi server', sys.versi + (sys.versi !== VERSI_APP ? ' · tampilan ' + VERSI_APP : '')], ['Cache server', sys.cacheHangat ? 'Hangat' : 'Dingin'], ['Pemanas otomatis', sys.keepWarm === 'off' ? 'Mati' : 'Aktif'], ['Script Properties', sys.propsKB + ' KB']].map((x) => `<div class="inset"><div class="xs muted">${x[0]}</div><b>${esc(x[1])}</b></div>`).join('')}</div>
         <div class="table-wrap mt-12" style="max-height:260px"><table class="tbl"><thead><tr><th>Sheet</th><th class="r">Baris</th></tr></thead><tbody>${Object.keys(b).map((k) => `<tr><td>${esc(k)}</td><td class="r">${fmtNum(b[k])}</td></tr>`).join('')}</tbody></table></div>
         <div class="row wrap gap-8 mt-12"><a class="btn sm" href="${esc(sys.spreadsheetUrl)}" target="_blank" rel="noopener">${ic('ext', 'sm')}Buka spreadsheet</a>${sys.folderUrl ? `<a class="btn sm" href="${esc(sys.folderUrl)}" target="_blank" rel="noopener">${ic('ext', 'sm')}Folder Drive</a>` : ''}<span class="badge ${sys.rahasia.sessionSecret ? 'success' : 'danger'} plain">Kunci sesi ${sys.rahasia.sessionSecret ? 'ada' : 'belum ada'}</span><span class="badge ${sys.rahasia.verifSecret ? 'success' : 'danger'} plain">Kunci verifikasi ${sys.rahasia.verifSecret ? 'ada' : 'belum ada'}</span><span class="xs muted">Pemanasan terakhir: ${sys.warmTerakhir ? esc(relatif(sys.warmTerakhir.at)) : '—'}</span></div>`;
     };
@@ -261,8 +262,8 @@ Pages.pengaturan = {
       const act = a.dataset.act;
       if (act === 'simpan-id') { const nilai = {}; $$('[data-k]', isi).forEach((i) => { nilai[i.dataset.k] = i.value.trim(); }); if (!nilai.APP_NAMA) return toast('Nama aplikasi wajib diisi.', 'warning'); if (nilai.URL_PUBLIK && !/^https:\/\//.test(nilai.URL_PUBLIK)) return toast('Alamat aplikasi harus diawali https://', 'warning'); simpan(nilai, 'Menyimpan identitas…', a); }
       if (act === 'logo-reset') { if (await simpan({ LOGO_URL: '' }, 'Menyimpan…', a)) tabIdentitas(); }
-      if (act === 'tema-reset') { tema = Object.assign({}, J('TEMA')); terapkanTema(Store.app); tabTampilan(); }
-      if (act === 'simpan-tema') { if (await simpan({ TEMA: tema, FONT_JUDUL: $('#fj', isi).value, FONT_ISI: $('#fi', isi).value }, 'Menerapkan tampilan…', a)) { cfg.fontJudul = $('#fj', isi).value; cfg.fontIsi = $('#fi', isi).value; } }
+      if (act === 'tema-reset') { tema = Object.assign({}, temaEfektif(J('TEMA'))); terapkanTema(Store.app); tabTampilan(); }
+      if (act === 'simpan-tema') { if (await simpan({ TEMA: Object.assign({}, tema, { gaya: 2 }), FONT_JUDUL: $('#fj', isi).value, FONT_ISI: $('#fi', isi).value }, 'Menerapkan tampilan…', a)) { cfg.fontJudul = $('#fj', isi).value; cfg.fontIsi = $('#fi', isi).value; } }
       if (act === 'simpan-pin') {
         const v = (id) => Math.round(num($('#' + id, isi).value));
         const baru = { panjang: v('ap-pj'), maksGagal: v('ap-mg'), kunciMenit: v('ap-km'), sesiJam: v('ap-sj'), kunciOtomatisMenit: v('ap-ko'), masaBerlakuHari: v('ap-mb'), tolakLemah: $('#ap-tl', isi).checked, pinTtdTerpisah: $('#ap-tt', isi).checked, aksi: $$('[data-aksi]:checked', isi).map((c) => c.dataset.aksi) };

@@ -5,8 +5,18 @@
 function kepala({ judul = '', desc = '', acts = '', badge = '' }) {
   return `<div class="page-head"><div class="grow"><div class="row wrap gap-8"><h1>${judul}</h1>${badge}</div>${desc ? `<p class="desc">${desc}</p>` : ''}</div>${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
 }
-function kpiHTML({ label, ikon = 'cash', cls = '', val = '', id = '', foot = '', hero = false, valCls = '' }) {
-  return `<div class="card kpi ${hero ? 'hero' : ''}"><div class="top"><span class="lbl2">${label}</span><span class="icon-box s ${cls}">${ic(ikon, 'sm')}</span></div><div class="kpi-val ${valCls}" ${id ? `id="${id}"` : ''}>${val}</div><div class="foot">${foot}</div></div>`;
+/* Kartu metrik: label kecil · angka besar (dihitung naik oleh Gerak) · status/persentase · sparkline opsional */
+function kpiHTML({ label, ikon = 'cash', cls = '', val = '', id = '', foot = '', hero = false, valCls = '', spark = null, sparkWarna = '' }) {
+  const sp = spark && spark.length > 1 ? `<div class="spark">${sparkArea(spark, { warna: sparkWarna || (hero ? 'var(--c-primary-h)' : 'var(--c-primary)') })}</div>` : '';
+  return `<div class="card kpi ${hero ? 'hero' : ''}"><div class="top"><span class="lbl2">${label}</span><span class="icon-box s ${cls}">${ic(ikon, 'sm')}</span></div><div class="kpi-val ${valCls}" ${id ? `id="${id}"` : ''}>${val}</div><div class="foot">${foot}</div>${sp}</div>`;
+}
+/* Deret kumulatif per jam hari ini (untuk sparkline kasir). sumber: [{ rows, ambil }] → array sejajar per sumber */
+function deretPerJam(sumber, jamBuka) {
+  const jam = (x) => parseInt(String(x.jam || '').slice(0, 2), 10);
+  const semua = []; sumber.forEach((s) => s.rows.forEach((x) => { if (!x.batal && !isNaN(jam(x))) semua.push(jam(x)); }));
+  if (!semua.length) return sumber.map(() => null);
+  const awal = Math.min(parseInt(jamBuka, 10) || 9, ...semua) - 1, akhir = Math.max(new Date().getHours(), ...semua);   // −1: titik nol sebelum buka
+  return sumber.map((s) => { const per = new Array(akhir - awal + 1).fill(0); s.rows.forEach((x) => { const h = jam(x) - awal; if (!x.batal && h >= 0 && h < per.length) per[h] += +s.ambil(x) || 0; }); let c = 0; return per.map((v) => (c += v)); });
 }
 const ikonBiaya = (k) => /listrik/i.test(k) ? 'bolt' : /galon|air/i.test(k) ? 'drop' : /gaji|bonus/i.test(k) ? 'users1' : /konsumsi|makan/i.test(k) ? 'food' : /gas|lpg/i.test(k) ? 'flame' : 'truck';
 const zona = () => (Store.app || {}).zona || 'WITA';
@@ -113,6 +123,8 @@ Pages.beranda = {
       const { trx, biaya, r, h } = ringkasLokal();
       const target = (Store.opsi || {}).targetCup || 80, app = Store.app || {};
       const stokPeringatan = (Store.notif || []).filter((n) => n.jenis === 'stok');
+      const [sMasuk, sCup, sOps] = deretPerJam([{ rows: trx, ambil: (t) => t.masuk }, { rows: trx, ambil: (t) => t.cup }, { rows: biaya, ambil: (b) => b.nominal }], app.jamBuka);
+      const sBersih = sMasuk && sOps ? sMasuk.map((v, i) => v - sOps[i]) : null;
       el.innerHTML = `<div class="stack">
         <div class="card hello">
           <div><h1>${sapaan()}, ${esc(Store.me.nama.split(' ')[0])}</h1>
@@ -121,10 +133,10 @@ Pages.beranda = {
           <div class="status-box"><span class="icon-box s ${h.terkunci ? 'success' : 'warning'}">${ic(h.terkunci ? 'lock' : 'unlock', 'sm')}</span><div><div class="small muted">Buku kas hari ini</div><b>${h.terkunci ? 'Sudah closing' : 'Masih terbuka'}</b></div>${Store.punya('pos') && !h.terkunci ? `<a class="btn primary" href="#/pos">${ic('plus', 'sm')}Transaksi baru</a>` : ''}</div>
         </div>
         <div class="grid g-4 kpis">
-          ${kpiHTML({ label: 'Total masuk', ikon: 'cash', cls: 'success', val: rp(r.masuk), foot: `${r.trx} transaksi · tips ${rp(r.tips)}` })}
-          ${kpiHTML({ label: 'Cup terjual', ikon: 'cup', val: `${r.cup} <small>/ ${target}</small>`, foot: `<div class="grow"><div class="meter s"><i data-w="${Math.min(100, r.cup / target * 100)}"></i></div></div>` })}
-          ${kpiHTML({ label: 'Pengeluaran lapak', ikon: 'receipt', cls: 'danger', val: rp(r.ops), foot: `${biaya.filter((b) => !b.batal).length} catatan biaya` })}
-          ${kpiHTML({ label: 'Omset bersih kasir', ikon: 'check-c', val: rp(r.bersih), hero: true, foot: 'Total masuk − pengeluaran' })}
+          ${kpiHTML({ label: 'Total masuk', ikon: 'cash', cls: 'accent', val: rp(r.masuk), foot: `${r.trx} transaksi · tips ${rp(r.tips)}`, spark: sMasuk })}
+          ${kpiHTML({ label: 'Cup terjual', ikon: 'cup', spark: sCup, val: `${r.cup} <small>/ ${target}</small>`, foot: `<div class="grow"><div class="meter s"><i data-w="${Math.min(100, r.cup / target * 100)}"></i></div></div>` })}
+          ${kpiHTML({ label: 'Biaya lapak', ikon: 'receipt', cls: 'danger', val: rp(r.ops), foot: `${biaya.filter((b) => !b.batal).length} catatan biaya`, spark: sOps, sparkWarna: 'var(--c-danger)' })}
+          ${kpiHTML({ label: 'Omset bersih kasir', ikon: 'check-c', val: rp(r.bersih), hero: true, foot: 'Total masuk − biaya', spark: sBersih })}
         </div>
         <div class="grid g-main">
           <div class="card">
@@ -194,7 +206,7 @@ Pages.pos = {
     const P = Pilih(el, { onChange: () => barPilih() });
     const barPilih = () => { const b = $('#bulk', el); if (b) b.innerHTML = bulkBarHTML(P.ids().length, `<button class="btn sm danger" data-bulk="batal">${ic('ban', 'sm')}Batalkan</button>`); };
 
-    el.innerHTML = `${kepala({ judul: 'Penjualan', desc: tgl(hariIni(), 'EEEE, d MMMM yyyy') + ' · pilih menu, atur jumlah, lalu simpan. Tetap bisa dipakai saat sinyal lemah.', acts: `<a class="btn" href="#/biaya">${ic('receipt', 'sm')}Catat biaya</a><button class="btn" data-act="riwayat">${ic('history', 'sm')}Riwayat</button>` })}
+    el.innerHTML = `${kepala({ judul: 'Kasir (POS)', desc: tgl(hariIni(), 'EEEE, d MMMM yyyy') + ' · pilih menu, atur jumlah, lalu simpan. Tetap bisa dipakai saat sinyal lemah.', acts: `<a class="btn" href="#/biaya">${ic('receipt', 'sm')}Catat biaya</a><button class="btn" data-act="riwayat">${ic('history', 'sm')}Riwayat</button>` })}
       <div id="lock-note"></div>
       <div class="pos">
         <div class="stack">
@@ -375,7 +387,7 @@ Pages.biaya = {
       const { biaya, h } = ringkasLokal();
       const aktif = biaya.filter((b) => !b.batal), tot = aktif.reduce((a, b) => a + b.nominal, 0), lock = !!h.terkunci;
       const sisa = plafon ? plafon - tot : 0, persen = plafon ? Math.min(100, tot / plafon * 100) : 0;
-      el.innerHTML = `${kepala({ judul: 'Pengeluaran lapak', desc: 'Kas kecil harian ' + esc((Store.app || {}).lapak || '') + '. Pengeluaran ini mengurangi omset bersih kasir.', acts: `<button class="btn" data-act="cetak">${ic('printer', 'sm')}Rekap biaya</button>${Store.punya('closing') ? `<a class="btn" href="#/closing">${ic('lock', 'sm')}Ke closing</a>` : ''}` })}
+      el.innerHTML = `${kepala({ judul: 'Biaya lapak', desc: 'Kas kecil harian ' + esc((Store.app || {}).lapak || '') + '. Pengeluaran ini mengurangi omset bersih kasir.', acts: `<button class="btn" data-act="cetak">${ic('printer', 'sm')}Rekap biaya</button>${Store.punya('closing') ? `<a class="btn" href="#/closing">${ic('lock', 'sm')}Ke closing</a>` : ''}` })}
       <div class="stack">
         ${lock ? `<div class="closed-note">${ic('lock')}<div class="grow"><b>Buku kas hari ini sudah ditutup.</b><div class="small" style="opacity:.85">${Store.owner() ? 'Anda tetap bisa mengoreksi; alasan koreksi akan diminta dan saldo dihitung ulang.' : 'Pengeluaran baru hari ini tidak bisa dicatat. Hubungi Owner untuk koreksi.'}</div></div></div>` : ''}
         <div class="grid g-side">

@@ -13,6 +13,11 @@ Pages.dashboard = {
       if (!d) { el.innerHTML = `<div class="stack"><div class="skel h-120"></div><div class="grid g-4 kpis">${'<div class="skel h-120"></div>'.repeat(4)}</div><div class="skel h-200"></div></div>`; return; }
       const k = d.kpi, app = Store.app || {};
       const dOm = pct(k.omset, k.omsetKemarin), dLaba = pct(k.labaBulan, k.labaBulanLalu);
+      /* deret sparkline 14 hari dari data tren (tanpa panggilan server tambahan) */
+      const t14 = (d.tren || []).slice(-14), sOm = t14.map((x) => x.masuk), sCup = t14.map((x) => x.cup);
+      const sSaldo = []; let sal = k.saldo; for (let i = t14.length - 1; i >= 0; i--) { sSaldo.unshift(sal); sal -= (t14[i].masuk - t14[i].ops - t14[i].belanja); }   // saldo kemarin = saldo hari ini − (masuk − biaya − belanja)
+      let ak = 0; const sLabaBln = (d.tren || []).filter((x) => x.t >= awalBulan()).map((x) => (ak += x.masuk - x.ops - x.belanja));
+      const sLaba = sLabaBln.length >= 2 ? sLabaBln : t14.map((x) => x.masuk - x.ops - x.belanja);
       el.innerHTML = `<div class="stack anim">
         <div class="card hello">
           <div><h1>${sapaan()}, ${esc(Store.me.nama)}</h1>
@@ -21,10 +26,10 @@ Pages.dashboard = {
         </div>
         ${d.belumClosing && d.belumClosing.length ? `<div class="notice">${ic('alert')}<div class="grow"><b>${d.belumClosing.length} hari belum Daily Closing</b><div class="small">${d.belumClosing.slice(0, 5).map((t) => tgl(t, 'd MMM')).join(', ')} — saldo kas belum final.</div></div><a class="btn sm" href="#/closing?t=${d.belumClosing[0]}">${ic('lock', 'sm')}Closing sekarang</a></div>` : ''}
         <div class="grid g-4 kpis">
-          ${kpiHTML({ label: 'Total masuk hari ini', ikon: 'cash', val: rp(k.omset), id: 'k1', foot: deltaHTML(dOm) + ' vs kemarin' })}
-          ${kpiHTML({ label: 'Cup terjual', ikon: 'cup', val: `${k.cup} <small>/ ${k.target}</small>`, foot: `<div class="grow"><div class="meter s"><i data-w="${Math.min(100, k.cup / (k.target || 80) * 100)}"></i></div></div>` })}
-          ${kpiHTML({ label: 'Saldo kas lapak', ikon: 'wallet', val: rp(k.saldo), id: 'k3', foot: `Awal ${rpK(k.saldoAwal)} · belanja ${rpK(k.belanja)}` })}
-          ${kpiHTML({ label: 'Laba kas ' + BULAN[+hariIni().slice(5, 7) - 1], ikon: 'trend-up', hero: true, val: rp(k.labaBulan), foot: deltaHTML(dLaba) + ' vs bulan lalu' })}
+          ${kpiHTML({ label: 'Omset hari ini', ikon: 'cash', cls: 'accent', val: rp(k.omset), id: 'k1', foot: deltaHTML(dOm) + ' vs kemarin', spark: sOm })}
+          ${kpiHTML({ label: 'Cup terjual', ikon: 'cup', val: `${k.cup} <small>/ ${k.target}</small>`, foot: deltaHTML(pct(k.cup, k.cupKemarin)) + ' vs kemarin', spark: sCup })}
+          ${kpiHTML({ label: 'Saldo kas laci', ikon: 'wallet', val: rp(k.saldo), id: 'k3', foot: `Awal ${rpK(k.saldoAwal)} · belanja ${rpK(k.belanja)}`, spark: sSaldo })}
+          ${kpiHTML({ label: 'Laba kas ' + BULAN[+hariIni().slice(5, 7) - 1], ikon: 'trend-up', hero: true, val: rp(k.labaBulan), foot: deltaHTML(dLaba) + ' vs bulan lalu', spark: sLaba })}
         </div>
         <div class="grid g-main">
           <div class="stack">
@@ -104,14 +109,15 @@ Pages.analitik = {
     const isi = $('#isi', el);
     const gambar = (d) => {
       const s = d.ringkas, p = d.ringkasPrev;
-      const kartu = (lbl, ikon, cls, val, a, b, kebalik, sub) => `<div class="card kpi"><div class="top"><span class="lbl2">${lbl}</span><span class="icon-box s ${cls}">${ic(ikon, 'sm')}</span></div><div class="kpi-val">${val}</div><div class="foot">${deltaHTML(pct(a, b), kebalik)}<span>${sub || 'vs ' + d.periode.hari + ' hari sebelumnya'}</span></div></div>`;
+      const kartu = (lbl, ikon, cls, val, a, b, kebalik, sub, deret) => kpiHTML({ label: lbl, ikon, cls, val, foot: `${deltaHTML(pct(a, b), kebalik)}<span>${sub || 'vs ' + d.periode.hari + ' hari sebelumnya'}</span>`, spark: deret });
+      const H = d.harian || [];
       isi.innerHTML = `<div class="stack anim">
         <div class="row wrap gap-8 small muted">${ic('calendar', 'sm')}Periode <b style="color:var(--c-text)">${tgl(d.periode.dari, 'd MMM yyyy')} – ${tgl(d.periode.sampai, 'd MMM yyyy')}</b> (${d.periode.hari} hari) dibanding ${tgl(d.prev.dari, 'd MMM')} – ${tgl(d.prev.sampai, 'd MMM yyyy')}</div>
         <div class="grid g-4 kpis">
-          ${kartu('Total pemasukan', 'cash', 'warning', rp(s.masuk), s.masuk, p.masuk)}
-          ${kartu('Cup terjual', 'cup', 'info', fmtNum(s.cup) + ' <small>cup</small>', s.cup, p.cup, false, fmtNum(s.avgCupHari, 1) + ' cup/hari')}
-          ${kartu('Laba kas', 'trend-up', 'success', rp(s.laba), s.laba, p.laba, false, 'margin ' + fmtNum(s.margin, 1) + '%')}
-          ${kartu('Rata-rata per transaksi', 'receipt', 'wood', rp(s.avgTrx), s.avgTrx, p.avgTrx, false, fmtNum(s.trx) + ' trx • ' + fmtNum(s.avgCupTrx, 1) + ' cup/trx')}
+          ${kartu('Total pemasukan', 'cash', 'accent', rp(s.masuk), s.masuk, p.masuk, false, '', H.map((h) => h.masuk))}
+          ${kartu('Cup terjual', 'cup', '', fmtNum(s.cup) + ' <small>cup</small>', s.cup, p.cup, false, fmtNum(s.avgCupHari, 1) + ' cup/hari', H.map((h) => h.cup))}
+          ${kartu('Laba kas', 'trend-up', '', rp(s.laba), s.laba, p.laba, false, 'margin ' + fmtNum(s.margin, 1) + '%', H.map((h) => h.laba))}
+          ${kartu('Rata-rata per transaksi', 'receipt', '', rp(s.avgTrx), s.avgTrx, p.avgTrx, false, fmtNum(s.trx) + ' trx · ' + fmtNum(s.avgCupTrx, 1) + ' cup/trx', H.map((h) => (h.trx ? h.masuk / h.trx : 0)))}
         </div>
         <div class="grid g-main">
           <div class="card"><div class="card-head"><div><h2>Tren pemasukan</h2><div class="sub">Garis putus-putus: periode sebelumnya (tampilan harian)</div></div><div id="tg"></div></div><div id="g-tren"></div><div class="legend mt-8" id="lg-tren"></div></div>
@@ -122,7 +128,7 @@ Pages.analitik = {
             ${[['Total pemasukan', s.masuk, 'var(--c-success)', 'POS ' + rpK(s.omset) + ' • acara ' + rpK(s.acara) + ' • tips ' + rpK(s.tips)], ['Biaya operasional', -s.ops, 'var(--c-danger)', fmtNum(s.masuk ? s.ops / s.masuk * 100 : 0, 1) + '% dari pemasukan'], ['Belanja bahan baku', -s.belanja, 'var(--c-warning)', fmtNum(s.masuk ? s.belanja / s.masuk * 100 : 0, 1) + '% dari pemasukan']].map((r) => `<div class="mt-12"><div class="row between small"><span class="strong">${r[0]}</span><b class="tnum ${r[1] < 0 ? 'bad' : 'ok'}">${r[1] < 0 ? '-' : ''}${rp(Math.abs(r[1]))}</b></div><div class="meter mt-4"><i data-w="${s.masuk ? Math.abs(r[1]) / s.masuk * 100 : 0}" style="background:${r[2]}"></i></div><div class="xs muted mt-4">${r[3]}</div></div>`).join('')}
             <div class="big-total mt-16"><div><b>Laba kas periode</b><div class="xs muted">Margin ${fmtNum(s.margin, 1)}%</div></div><span class="v">${rp(s.laba)}</span></div>
           </div>
-          <div class="card"><div class="card-head"><div><h3>Laba kas harian</h3><div class="sub">Kolom per hari; kolom di bawah garis nol = rugi kas (biasanya hari gajian / belanja besar)</div></div></div><div id="g-laba"></div><div class="legend-row xs muted"><span><i style="background:var(--s3)"></i>Laba</span><span><i style="background:var(--s5)"></i>Rugi kas</span></div></div>
+          <div class="card"><div class="card-head"><div><h3>Laba kas harian</h3><div class="sub">Kolom per hari; kolom di bawah garis nol = rugi kas (biasanya hari gajian / belanja besar)</div></div></div><div id="g-laba"></div><div class="legend-row xs muted"><span><i style="background:var(--s1)"></i>Laba</span><span><i style="background:var(--c-danger)"></i>Rugi kas</span></div></div>
         </div>
         <div class="grid g-2">
           <div class="card"><div class="card-head"><div><h3>Menu terlaris</h3><div class="sub">Peringkat & perubahan dibanding periode sebelumnya</div></div><div id="mtab"></div></div><div id="menu-list"></div></div>
@@ -146,7 +152,7 @@ Pages.analitik = {
       $('#tg', isi).innerHTML = segHTML([{ v: 'harian', l: 'Harian' }, { v: 'mingguan', l: 'Mingguan' }, { v: 'bulanan', l: 'Bulanan' }], tampil);
       pasangSeg($('#tg .seg', isi), (v) => { tampil = v; trenG(d); });
       trenG(d);
-      grafikKolom($('#g-laba', isi), { labels: d.harian.map((h) => h.t), values: d.harian.map((h) => h.laba), nama: 'Laba kas', fmtX: (t) => tgl(t, 'd/M'), tipX: (t) => tgl(t, 'EEEE, d MMM'), height: 230, colorFn: (v) => v < 0 ? 'var(--s5)' : 'var(--s3)', fmtTip: rpTanda, tipExtra: (i) => `<div class="r"><span>Pemasukan</span><b>${rp(d.harian[i].masuk)}</b></div><div class="r"><span>Biaya + belanja</span><b>${rp(d.harian[i].ops + d.harian[i].belanja)}</b></div>` });
+      grafikKolom($('#g-laba', isi), { labels: d.harian.map((h) => h.t), values: d.harian.map((h) => h.laba), nama: 'Laba kas', fmtX: (t) => tgl(t, 'd/M'), tipX: (t) => tgl(t, 'EEEE, d MMM'), height: 230, colorFn: (v) => v < 0 ? 'var(--c-danger)' : 'var(--s1)', fmtTip: rpTanda, tipExtra: (i) => `<div class="r"><span>Pemasukan</span><b>${rp(d.harian[i].masuk)}</b></div><div class="r"><span>Biaya + belanja</span><b>${rp(d.harian[i].ops + d.harian[i].belanja)}</b></div>` });
       grafikDonat($('#d-kat', isi), { items: d.kategori.map((k, i) => ({ name: k.nama, value: k.omset, color: SERI[i] })), center: { v: fmtNum(s.cup), l: 'cup' }, size: 160, fmt: rp });
       const urutHari = [1, 2, 3, 4, 5, 6, 0];
       grafikKolom($('#g-dow', isi), { labels: urutHari.map((i) => d.hariMinggu[i].hari.slice(0, 3)), values: urutHari.map((i) => d.hariMinggu[i].rata), nama: 'Rata-rata pemasukan', height: 220, color: 'var(--s2)', tipX: (l, i) => d.hariMinggu[urutHari[i]].hari + ' (' + d.hariMinggu[urutHari[i]].n + ' hari)' });
@@ -194,12 +200,14 @@ Pages.rekap = {
     let data = null;
     const gambar = (d) => {
       data = d; const s = d.ringkas;
+      const ur = (d.rows || []).slice().sort((a, b) => (a.tanggal < b.tanggal ? -1 : 1)).slice(-31);   // deret sparkline per hari
+      const sp = { bersih: ur.map((r) => r.bersih), belanja: ur.map((r) => r.belanja), laba: ur.map((r) => r.bersih - r.belanja), saldo: ur.map((r) => r.saldoAkhir) };
       isi.innerHTML = `<div class="stack anim">
         <div class="grid g-4 kpis">
-          ${kpiHTML({ label: 'Omset bersih · ' + esc(label), ikon: 'cash', val: rp(s.bersih), foot: `Masuk ${rpK(s.masuk)} · operasional ${rpK(s.ops)}` })}
-          ${kpiHTML({ label: 'Belanja bahan', ikon: 'bag', val: rp(s.belanja), foot: `${fmtNum(s.masuk ? s.belanja / s.masuk * 100 : 0, 1)}% dari pemasukan` })}
-          ${kpiHTML({ label: 'Laba kas', ikon: 'trend-up', val: rp(s.laba), foot: `Margin ${fmtNum(s.margin, 1)}%` })}
-          ${kpiHTML({ label: 'Saldo kas sekarang', ikon: 'wallet', hero: true, val: rp(d.saldoSekarang), foot: 'Termasuk transaksi hari ini' })}
+          ${kpiHTML({ label: 'Omset bersih · ' + esc(label), ikon: 'cash', cls: 'accent', val: rp(s.bersih), foot: `Masuk ${rpK(s.masuk)} · operasional ${rpK(s.ops)}`, spark: sp.bersih })}
+          ${kpiHTML({ label: 'Belanja bahan', ikon: 'bag', val: rp(s.belanja), foot: `${fmtNum(s.masuk ? s.belanja / s.masuk * 100 : 0, 1)}% dari pemasukan`, spark: sp.belanja, sparkWarna: 'var(--s3)' })}
+          ${kpiHTML({ label: 'Laba kas', ikon: 'trend-up', val: rp(s.laba), foot: `Margin ${fmtNum(s.margin, 1)}%`, spark: sp.laba })}
+          ${kpiHTML({ label: 'Saldo kas sekarang', ikon: 'wallet', hero: true, val: rp(d.saldoSekarang), foot: 'Termasuk transaksi hari ini', spark: sp.saldo })}
         </div>
         ${d.belumClosing && d.belumClosing.length ? `<div class="notice">${ic('alert')}<div class="grow"><b>${d.belumClosing.length} hari belum closing</b> — ${d.belumClosing.slice(0, 6).map((t) => `<a href="#/closing?t=${t}">${tgl(t, 'd MMM')}</a>`).join(', ')}</div></div>` : ''}
         <div class="stack">

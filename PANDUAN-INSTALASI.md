@@ -1,8 +1,10 @@
 # Panduan Instalasi — Minuman Rempah Pelaut Management System
 
-Versi 1.1.0 · Zona waktu WITA (Asia/Makassar)
+Versi 1.2.0 · Zona waktu WITA (Asia/Makassar)
 
-> **Sudah memasang versi 1.0?** Langsung ke [bagian 0 — Update dari v1.0 ke v1.1](#0-update-dari-v10-ke-v11). Data Anda tidak berubah.
+> **Sudah memakai versi 1.1?** Langsung ke [Update ke v1.2](#update-ke-v12--tampilan-baru-hanya-frontend). Cukup ganti frontend; backend dan data tidak berubah.
+>
+> **Masih versi 1.0?** Kerjakan dulu [bagian 0a — backend v1.1](#0a-backend-apps-script), lalu lanjut ke Update ke v1.2.
 
 Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tahap ditutup dengan tanda **✅ Berhasil bila…** agar Anda tahu kapan boleh lanjut.
 
@@ -10,6 +12,7 @@ Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tah
 
 ## Daftar isi
 
+- [Update ke v1.2 — tampilan baru (hanya frontend)](#update-ke-v12--tampilan-baru-hanya-frontend)
 0. [Update dari v1.0 ke v1.1](#0-update-dari-v10-ke-v11)
 1. [Isi paket & ke mana setiap berkas pergi](#1-isi-paket--ke-mana-setiap-berkas-pergi)
 2. [Gambaran cara kerja aplikasi](#2-gambaran-cara-kerja-aplikasi)
@@ -29,6 +32,58 @@ Panduan ini ditulis untuk pemula. Ikuti urutannya dari atas ke bawah. Setiap tah
 16. [Kendala umum & solusinya](#16-kendala-umum--solusinya)
 17. [Pembatalan, koreksi & aturan PIN (v1.1)](#17-pembatalan-koreksi--aturan-pin-v11)
 18. [Status sinkron: Pending, Berhasil, Gagal](#18-status-sinkron-pending-berhasil-gagal)
+19. [Sistem desain v1.2 (untuk yang ingin mengubah tampilan)](#19-sistem-desain-v12-untuk-yang-ingin-mengubah-tampilan)
+
+---
+
+## Update ke v1.2 — tampilan baru (hanya frontend)
+
+Versi 1.2 hanya mengganti **tampilan dan animasi**. Logika bisnis, rumus kas, struktur data, nama variabel, dan komunikasi ke Google Apps Script tidak diubah. Karena itu:
+
+- **Backend tidak perlu diubah.** Berkas `Kode.gs`, `Setup.gs`, `DocEngine.gs` tetap versi 1.1. Tidak perlu menjalankan `perbaruiSkema` dan tidak perlu deploy ulang Apps Script.
+- **Data tidak tersentuh.** Tidak ada sheet, kolom, atau baris yang ditambah atau diubah.
+- Alamat `/exec` dan `js/config.js` tetap sama.
+
+> Syarat: backend sudah **1.1**. Cek dengan membuka alamat `/exec` di browser; harus ada `"versi":"1.1.0"`. Bila masih 1.0, kerjakan dulu [0a](#0a-backend-apps-script).
+
+### Langkah
+1. Ekstrak `rempah-pelaut-frontend.zip` v1.2 ke folder sementara.
+2. Salin semua isinya ke folder repository Anda (timpa yang lama), **kecuali `js/config.js`**.
+3. Kirim ke GitHub dari folder repository (folder yang berisi `index.html`):
+   ```bash
+   git add .
+   git commit -m "Update tampilan ke v1.2"
+   git push
+   ```
+4. Tunggu 1–2 menit, buka aplikasi, lalu tekan **Ctrl+Shift+R**. Di HP: tutup aplikasi sepenuhnya, lalu buka lagi. Kaki halaman menampilkan **versi 1.2.0**.
+5. Bila ikon aplikasi di layar HP masih logo lama, hapus pintasannya lalu pasang lagi (**Tambahkan ke layar utama**). Ikon PWA disimpan oleh HP dan tidak selalu ikut diperbarui.
+
+### Warna yang sudah Anda atur
+- Bila warna aplikasi **masih bawaan** (v1.0 atau v1.1), tampilan otomatis memakai warna baru: hijau `#059669` di atas latar `#F8FAFC`. Tidak ada yang perlu disimpan; spreadsheet tidak diubah.
+- Bila Anda **pernah mengubah warna sendiri**, warna itu tetap dipakai.
+- Ingin memakai warna baru setelah sebelumnya mengubah warna sendiri? **Pengaturan → Warna & font → Hijau rempah (bawaan) → Simpan tampilan.**
+- Ingin kembali ke warna lama? Pilih preset **Kedai hangat**, lalu **Simpan tampilan**. Pilihan ini tetap dipakai di versi berikutnya.
+
+### Nama menu yang berganti
+| Dulu | Sekarang |
+|---|---|
+| Penjualan (POS) | Kasir (POS) |
+| Pengeluaran lapak | Biaya lapak |
+| Stok & opname | Stok bahan (opname tetap di halaman ini) |
+| Aset & inventaris | Aset inventaris |
+
+Isi halaman dan alamatnya (`#/pos`, `#/biaya`, `#/stok`, `#/aset`) tidak berubah, jadi bookmark lama tetap jalan.
+
+### Apa yang baru di v1.2
+| Area | Perubahan |
+|---|---|
+| Gaya | Dashboard bersih: latar `#F8FAFC`, kartu putih bergaris tipis `#E2E8F0`, sudut 16 px, bayangan sangat halus, aksen hijau `#059669`, huruf Plus Jakarta Sans |
+| Sidebar | Logo jangkar + daun rempah. Menu aktif berupa kapsul hijau muda dengan garis penanda di kiri. Penghitung merah kecil untuk stok menipis dan dokumen menunggu |
+| Header atas | Kotak pencarian dengan tombol pintas **Ctrl K** (Mac: ⌘ K), lonceng dengan titik merah saat ada notifikasi, chip profil dengan avatar inisial bulat |
+| HP | Navigasi bawah berupa kapsul mengambang; sidebar menjadi laci dari kiri; form membuka dari bawah layar |
+| Kartu metrik | Label kecil, angka besar yang menghitung naik, status persen naik/turun, dan grafik garis mini (sparkline) hijau dengan area gradien di dasbor, beranda kasir, rekap kas, dan analitik |
+| Animasi | Halaman masuk dengan geser 8 px + pudar 0,25 detik; kartu terangkat 2 px saat diarahkan kursor; tab kapsul dengan penanda geser; jendela dialog membesar dari 96% dengan latar buram. Semua memakai `transform` dan `opacity` saja (dipercepat GPU, tanpa pustaka luar) |
+| Grafik | Warna seri baru yang sudah diuji untuk buta warna; garis pembanding periode sebelumnya kini benar-benar putus-putus |
 
 ---
 
@@ -50,7 +105,7 @@ Bagian ini untuk Anda yang **sudah** memakai versi 1.0. Semua data (transaksi, c
 5. Buka alamat `/exec` di browser. Harus muncul tulisan JSON yang memuat `"versi":"1.1.0"`.
 
 ### 0b. Frontend (GitHub Pages)
-1. Ekstrak `rempah-pelaut-frontend.zip` v1.1 ke folder sementara.
+1. Ekstrak `rempah-pelaut-frontend.zip` ke folder sementara. (Bila Anda langsung naik dari v1.0 ke v1.2, pakai ZIP v1.2 di langkah ini, lalu lewati langkah di bagian *Update ke v1.2* karena sudah tercakup.)
 2. Salin semua isinya ke folder repository Anda (timpa yang lama), **kecuali `js/config.js`**. Jangan timpa `config.js` karena di situ alamat `/exec` Anda.
 3. Hapus dua berkas lama yang tidak dipakai lagi:
    ```bash
@@ -469,6 +524,8 @@ Cek kondisi kapan saja dengan menjalankan `cekPerforma()` di editor, atau buka *
 4. **Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy**.
    > Pakai **Edit**, bukan *New deployment*. Dengan begitu URL `/exec` tetap sama dan `config.js` tidak perlu diubah.
 
+Tidak setiap versi mengubah backend. Versi 1.2, misalnya, hanya mengganti frontend. Catatan perubahan (`CHANGELOG.md`) selalu menyebut bagian mana yang perlu diganti.
+
 **Frontend**: salin berkas baru ke folder `rempah-pelaut-frontend` (timpa yang lama, **kecuali `js/config.js`**), lalu:
 ```bash
 git add .
@@ -590,3 +647,57 @@ Daily closing menolak dijalankan selama masih ada data Pending/Gagal, agar tidak
 ---
 
 *Minuman Rempah Pelaut — "Mencari Rezeki dengan Hidup Sehat" · Bugis, Tj. Redeb, Berau, Kalimantan Timur*
+
+---
+
+## 19. Sistem desain v1.2 (untuk yang ingin mengubah tampilan)
+
+Bagian ini untuk Anda (atau pengembang) yang ingin menyetel tampilan sendiri. Pengguna biasa cukup memakai **Pengaturan → Warna & font**.
+
+### Di mana kodenya
+| Berkas | Isi |
+|---|---|
+| `css/style.css` | Seluruh tampilan. Bagian paling atas (`:root`) berisi token warna, sudut, bayangan, dan kurva gerak. CSS murni, tanpa Tailwind, tanpa pustaka luar |
+| `js/core.js` | `TEMA_BAWAAN` (warna bawaan), `temaEfektif()` (mengganti tema bawaan lama ke yang baru), `terapkanTema()` (menulis warna dari Pengaturan ke token CSS) |
+| `js/gerak.js` | Sistem gerak: kartu masuk bertahap, angka menghitung naik, grafik ber-morph, dan utilitas `animateValue()` |
+| `js/charts.js` | Grafik, termasuk `sparkArea()` untuk grafik garis mini di kartu metrik |
+| `js/pages-kasir.js` | `kpiHTML()`: komponen kartu metrik (label, angka, status, sparkline) |
+
+### Token utama (`:root` di `css/style.css`)
+| Token | Nilai bawaan | Dipakai untuk |
+|---|---|---|
+| `--c-bg` | `#F8FAFC` | Latar halaman |
+| `--c-card` | `#FFFFFF` | Kartu |
+| `--c-border` | `#E2E8F0` | Garis tepi kartu & input |
+| `--c-primary` / `--c-primary-h` | `#059669` / `#047857` | Tombol utama, menu aktif, sparkline |
+| `--c-primary-t` | campuran 9% hijau | Latar kapsul aktif & chip terpilih (setara `#ECFDF5`) |
+| `--c-text` / `--c-muted` | `#0F172A` / `#64748B` | Teks utama / keterangan |
+| `--radius` | `16px` | Sudut kartu (bisa diubah di Pengaturan, 6–20 px) |
+| `--sh-1` | `0 1px 3px 0 rgba(0,0,0,.04), 0 1px 2px -1px rgba(0,0,0,.04)` | Bayangan kartu |
+| `--ease` | `cubic-bezier(.16,1,.3,1)` | Kurva semua animasi masuk |
+
+Warna dari **Pengaturan → Warna & font** ditulis ke token-token ini saat aplikasi dibuka, jadi Anda tidak perlu mengedit CSS untuk mengganti warna.
+
+### Animasi
+- **Pindah halaman**: `@keyframes pageEnter` (pudar + geser 8 px, 0,25 detik). Memakai `animation-fill-mode: backwards`, bukan `forwards`. Alasannya: `forwards` membiarkan `transform` tetap menempel setelah animasi selesai, dan itu membuat elemen `position: fixed` di dalam halaman (bar keranjang & sheet POS di HP) ikut bergeser. Hasil visualnya sama persis.
+- **Kartu**: `.card.kpi:hover` terangkat 2 px dalam 0,2 detik (hanya di perangkat bermouse).
+- **Dialog**: latar `rgba(15,23,42,.4)` + `backdrop-filter: blur(4px)`, kotak membesar dari `scale(.96)`.
+- **Angka**: kartu metrik, total POS, dan angka tengah donat sudah menghitung naik otomatis. Untuk elemen lain:
+  ```js
+  animateValue(document.querySelector('#angka-saya'), 0, 1250000);       // 800 ms, ease-out cubic
+  animateValue(el, 0, 71, 600);                                          // durasi sendiri
+  ```
+  Awalan dan akhiran teks dipertahankan, jadi `Rp 0` menjadi `Rp 1.250.000` dan `0 cup` menjadi `71 cup`. Format angka memakai `toLocaleString('id-ID')`.
+- **Kurangi gerakan**: bila perangkat diatur untuk mengurangi gerakan, semua animasi dimatikan dan angka langsung tampil.
+
+### Kartu metrik dengan sparkline
+```js
+kpiHTML({
+  label: 'Omset hari ini', ikon: 'cash', cls: 'accent',
+  val: rp(15750000),
+  foot: deltaHTML(12.4) + ' vs kemarin',
+  spark: [820000, 1040000, 990000, 1210000, 1575000],   // deret angka; minimal 2 titik
+  sparkWarna: 'var(--c-danger)'                           // opsional; bawaan hijau
+});
+```
+Deret sparkline diambil dari data yang sudah dimuat halaman (tren 14 hari di dasbor, per jam di beranda kasir, per hari di rekap dan analitik), jadi tidak ada panggilan server tambahan. Bila semua nilainya nol, garis tidak digambar.

@@ -52,7 +52,8 @@ function grafikGaris(el, cfg) {
     cfg.series.forEach((s, si) => {
       const c = s.color || SERI[si], d = jalur(s.values, max);
       if (s.area !== false && cfg.series.length <= 2) p += `<path class="ar ${masuk ? 'draw' : ''}" data-s="${si}" d="${areaDari(s.values, max)}" fill="${c}" style="${tunda(150)}"/>`;
-      p += `<path class="ln ${masuk ? 'draw' : ''}" data-s="${si}" d="${d}" stroke="${c}" ${s.dash ? 'stroke-dasharray="5 5"' : ''} style="${s.dash ? '' : tunda(0)}"/>`;
+      /* garis pembanding (putus-putus) tidak memakai animasi "menggambar" — dasharray animasi akan menimpa pola putus-putusnya */
+      p += s.dash ? `<path class="ln putus ${masuk ? 'samar' : ''}" data-s="${si}" d="${d}" stroke="${c}" style="${masuk ? tunda(200) : ''}"/>` : `<path class="ln ${masuk ? 'draw' : ''}" data-s="${si}" d="${d}" stroke="${c}" style="${tunda(0)}"/>`;
       const lv = s.values[n - 1];
       if (!s.dash) p += `<circle class="akhir ${masuk ? 'draw' : ''}" data-s="${si}" cx="${X(n - 1)}" cy="${Y(lv)}" r="4.5" fill="${c}" stroke="var(--c-card)" stroke-width="2" style="${tunda(700)}"/>`;
       if (cfg.endLabel !== false && !s.dash) p += `<text class="endlbl akhir ${masuk ? 'draw' : ''}" data-s="${si}" x="${X(n - 1) + 9}" y="${Y(lv) + 4}" style="${tunda(750)}">${esc(fy(lv))}</text>`;
@@ -224,6 +225,17 @@ function heatmapHTML(heat, jamDari = 8, jamSampai = 22) {
   return s + `</div><div class="row between mt-8 xs muted"><span>Sepi</span><div style="flex:1;max-width:160px;height:8px;border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--c-primary) 12%,var(--c-card)),var(--c-primary))"></div><span>Ramai (${max} cup)</span></div>`;
 }
 /* ---------- Sparkline ---------- */
+/* Sparkline kartu metrik: garis lengkung halus + area gradien transparan di bawahnya.
+   Melebar mengikuti kartu (preserveAspectRatio none); tebal garis tetap 2 px (non-scaling-stroke). */
+let _sparkN = 0;
+function sparkArea(vals, opt = {}) {
+  vals = (vals || []).map((v) => +v || 0); if (vals.length < 2 || vals.every((v) => v === 0)) return '';   // belum ada data → tanpa garis
+  const W = 200, H = 46, pad = 5, warna = opt.warna || 'var(--c-primary)', id = 'spk' + (++_sparkN);
+  const max = Math.max(...vals), min = Math.min(...vals), datar = max === min, rentang = (max - min) || 1;
+  const X = (i) => +(i * W / (vals.length - 1)).toFixed(2), Y = (v) => datar ? H / 2 : +(pad + (H - pad * 2) * (1 - (v - min) / rentang)).toFixed(2);
+  const d = vals.map((v, i) => { if (!i) return `M0,${Y(v)}`; const x0 = X(i - 1), x1 = X(i), dx = (x1 - x0) / 2; return `C${x0 + dx},${Y(vals[i - 1])} ${x1 - dx},${Y(v)} ${x1},${Y(v)}`; }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${warna};stop-opacity:.24"/><stop offset="1" style="stop-color:${warna};stop-opacity:0"/></linearGradient></defs><path d="${d}L${W},${H}L0,${H}Z" fill="url(#${id})"/><path class="ln" d="${d}" style="stroke:${warna}" vector-effect="non-scaling-stroke"/></svg>`;
+}
 function sparkSVG(vals, w = 120, h = 36, warna = 'var(--s1)') {
   if (!vals.length) return ''; const max = Math.max(1, ...vals), min = Math.min(...vals);
   const X = (i) => i * (w - 6) / Math.max(1, vals.length - 1) + 3, Y = (v) => h - 4 - (h - 8) * ((v - min) / Math.max(1, max - min));

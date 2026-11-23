@@ -127,3 +127,26 @@ const Gerak = {
 };
 /* klik yang mengganti isi (tab, filter, halaman tabel, segmen) → isi baru memudar masuk */
 document.addEventListener('click', (e) => { if (e.target.closest('[data-tab], [data-pg], [data-st], [data-kat], [data-j], [data-r], .seg button, .chips .chip, .tabs-v button')) Gerak.aksiT = Gerak.sekarang(); }, true);
+
+/* ---------------------------------------------------------------------
+   animateValue — utilitas angka berputar (requestAnimationFrame, easing ease-out cubic).
+   Mempertahankan awalan/akhiran teks, mis. "Rp 1.250.000" atau "71 cup".
+   Kartu metrik (.kpi-val), total POS, dan tengah donat sudah dianimasikan otomatis oleh Gerak;
+   pakai fungsi ini untuk elemen lain, mis.:  animateValue(el, 0, 1250000)
+   --------------------------------------------------------------------- */
+function animateValue(element, start, end, duration = 800) {
+  if (!element) return;
+  const teks = element.textContent || '', m = teks.match(/^([^\d-]*)(-?[\d.]+)(.*)$/s);
+  const awal = m ? m[1] : '', akhir = m ? m[3] : '';
+  const tulis = (v) => { element.textContent = awal + Math.floor(v).toLocaleString('id-ID') + akhir; };
+  if (Gerak.diam() || duration <= 0) return tulis(end);
+  let startTimestamp = null;
+  const step = (timestamp) => {
+    if (!startTimestamp) startTimestamp = timestamp;
+    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    tulis(easeOut * (end - start) + start);
+    if (progress < 1) window.requestAnimationFrame(step); else tulis(end);
+  };
+  window.requestAnimationFrame(step);
+}

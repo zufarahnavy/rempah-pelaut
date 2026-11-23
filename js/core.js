@@ -127,7 +127,15 @@ const Topline = {
 };
 
 /* ---------------- API ---------------- */
-const VERSI_APP = '1.1.0';
+const VERSI_APP = '1.2.0';
+/* Versi 1.2 hanya mengubah tampilan: tetap memakai API server 1.1 (berkas .gs tidak perlu diganti).
+   Server dianggap cocok bila versinya >= VERSI_API_MIN (mayor.minor). */
+const VERSI_API_MIN = '1.1';
+function serverCocok(sv) {
+  if (!sv) return true;
+  const a = String(sv).split('.').map(Number), b = VERSI_API_MIN.split('.').map(Number);
+  return a[0] > b[0] || (a[0] === b[0] && (a[1] || 0) >= b[1]);
+}
 const READ_RE = /(\.(list|get|status)$)|^(boot|hariIni|dashboard|analitik|ping|publik\.boot|de\.ringkas|pengaturan\.get|sistem\.status|audit\.list|de\.dokumen\.prefill)$/;
 const API = {
   url: ((window.APP_CONFIG || {}).GAS_URL || '').trim(),
@@ -491,15 +499,26 @@ async function batalkanData(items, opt = {}) {
 /* ---------------- Tema dinamis (warna, font, sudut) ---------------- */
 const FONT_URL = { 'Playfair Display': 'Playfair+Display:wght@500;600;700', Lora: 'Lora:wght@500;600;700', 'DM Serif Display': 'DM+Serif+Display', Merriweather: 'Merriweather:wght@400;700', 'Cormorant Garamond': 'Cormorant+Garamond:wght@500;600;700', Fraunces: 'Fraunces:wght@500;600;700', Poppins: 'Poppins:wght@400;500;600;700', Inter: 'Inter:wght@400;500;600;700', 'Plus Jakarta Sans': 'Plus+Jakarta+Sans:wght@400;500;600;700;800', Nunito: 'Nunito:wght@400;600;700;800', 'DM Sans': 'DM+Sans:wght@400;500;600;700', Manrope: 'Manrope:wght@400;500;600;700;800', Lato: 'Lato:wght@400;700;900', 'Source Sans 3': 'Source+Sans+3:wght@400;600;700' };
 const FONT_SERIF = ['Playfair Display', 'Lora', 'DM Serif Display', 'Merriweather', 'Cormorant Garamond', 'Fraunces'];
+/* Tema bawaan v1.2 "Clean SaaS · hijau rempah". */
+const TEMA_BAWAAN = { primary: '#059669', primaryHover: '#047857', secondary: '#0F172A', bg: '#F8FAFC', card: '#FFFFFF', text: '#0F172A', muted: '#64748B', border: '#E2E8F0', success: '#16A34A', danger: '#DC2626', warning: '#D97706', radius: 16, gaya: 2 };
+/* Tema bawaan versi lama yang tersimpan di Sheets diganti tampilan v1.2.
+   Tema yang sengaja diubah Owner (atau disimpan dari v1.2, bertanda gaya:2) tidak disentuh. */
+function temaEfektif(t) {
+  const lama = [['#B8862D', '#F5EBD7'], ['#A8782A', '#F5F3EF'], ['#A8782A', '#F6F1E7']];
+  if (!t || !t.primary) return Object.assign({}, TEMA_BAWAAN);
+  if (!t.gaya && lama.some((x) => String(t.primary).toUpperCase() === x[0] && String(t.bg || '').toUpperCase() === x[1])) return Object.assign({}, TEMA_BAWAAN);
+  return t;
+}
 function terapkanTema(app) {
   if (!app) return;
-  const t = app.tema || {}, r = document.documentElement.style;
+  const t = temaEfektif(app.tema), r = document.documentElement.style;
   const peta = { primary: '--c-primary', primaryHover: '--c-primary-h', secondary: '--c-secondary', bg: '--c-bg', card: '--c-card', text: '--c-text', muted: '--c-muted', border: '--c-border', success: '--c-success', danger: '--c-danger', warning: '--c-warning' };
   Object.keys(peta).forEach((k) => { if (t[k]) r.setProperty(peta[k], t[k]); });
   if (t.primary) r.setProperty('--s1', t.primary);
-  const rad = Math.max(2, Math.min(14, num(t.radius) || 8));
-  r.setProperty('--radius', rad + 'px'); r.setProperty('--radius-md', rad + 'px'); r.setProperty('--radius-sm', Math.max(3, rad - 2) + 'px'); r.setProperty('--radius-xs', Math.max(2, rad - 4) + 'px'); r.setProperty('--radius-lg', (rad + 4) + 'px');
-  const fh = app.fontJudul || 'Plus Jakarta Sans', fb = app.fontIsi || 'Plus Jakarta Sans';
+  const rad = Math.max(6, Math.min(20, num(t.radius) || 16));
+  r.setProperty('--radius', rad + 'px'); r.setProperty('--radius-md', Math.round(rad * .75) + 'px'); r.setProperty('--radius-sm', Math.max(4, Math.round(rad * .625)) + 'px'); r.setProperty('--radius-xs', Math.max(3, Math.round(rad * .375)) + 'px'); r.setProperty('--radius-lg', (rad + 4) + 'px');
+  let fh = app.fontJudul || 'Plus Jakarta Sans', fb = app.fontIsi || 'Plus Jakarta Sans';
+  if (fh === 'Playfair Display' && fb === 'Inter') { fh = 'Plus Jakarta Sans'; fb = 'Plus Jakarta Sans'; }   // pasangan font bawaan v1.0
   r.setProperty('--font-head', `'${fh}', ${FONT_SERIF.includes(fh) ? 'Georgia, serif' : 'system-ui, sans-serif'}`); r.setProperty('--font-body', `'${fb}', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`);
   const fam = [fh, fb].filter((v, i, a) => a.indexOf(v) === i).map((f) => FONT_URL[f]).filter(Boolean);
   let link = $('#gfont'); const href = 'https://fonts.googleapis.com/css2?' + fam.map((f) => 'family=' + f).join('&') + '&display=swap';
@@ -642,7 +661,7 @@ async function tesKoneksi() {
     const r = await API.raw('ping', {});
     const ms = Math.round(performance.now() - t0);
     h += baris(true, 'Server Google Apps Script menjawab', 'Waktu respons ' + fmtNum(ms) + ' ms' + (r.data ? ' · server v' + esc(r.data.versi) + ' · tanggal server ' + esc(r.data.hariIni) : ''));
-    if (r.data && r.data.versi !== VERSI_APP) h += baris(null, 'Versi tampilan v' + VERSI_APP + ' berbeda dengan server v' + esc(r.data.versi), 'Perbarui berkas .gs lalu Deploy → Manage deployments → Edit → New version.');
+    if (r.data && !serverCocok(r.data.versi)) h += baris(null, 'Tampilan v' + VERSI_APP + ' membutuhkan server v' + VERSI_API_MIN + ' atau lebih baru (server: v' + esc(r.data.versi) + ')', 'Perbarui berkas .gs lalu Deploy → Manage deployments → Edit → New version.');
   } catch (e) {
     h += baris(false, 'Server tidak menjawab dengan benar', esc(e.message) + (e.offline && navigator.onLine ? ' Kemungkinan: URL salah, Web App belum di-deploy dengan akses "Anyone", atau jaringan memblokir script.google.com.' : ''));
   }

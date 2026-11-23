@@ -5,7 +5,7 @@ Aplikasi kasir & pembukuan lapak minuman rempah: POS kasir (tampilan kartu atau 
 - **Frontend**: HTML/CSS/JS murni (PWA), dihosting di GitHub Pages. Repository ini.
 - **Backend**: Google Apps Script sebagai REST API (Google Sheets + Drive). Kodenya **tidak** disimpan di sini.
 
-Versi: **1.1.0**
+Versi: **1.2.0** (bekerja dengan backend 1.1.x)
 
 ## Satu-satunya berkas yang perlu diubah
 
@@ -13,7 +13,7 @@ Versi: **1.1.0**
 
 ## Panduan
 
-Langkah lengkap ada di [PANDUAN-INSTALASI.md](PANDUAN-INSTALASI.md): pasang backend, deploy, GitHub Pages, data demo, mulai data riil, serta **update dari v1.0 ke v1.1** (bagian 0).
+Langkah lengkap ada di [PANDUAN-INSTALASI.md](PANDUAN-INSTALASI.md): pasang backend, deploy, GitHub Pages, data demo, mulai data riil, serta cara update (bagian *Update ke v1.2* dan bagian 0). Token desain, animasi, dan `animateValue()` dijelaskan di bagian 19.
 
 ## Halaman
 

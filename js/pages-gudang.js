@@ -159,7 +159,7 @@ Pages.stok = {
     let kat = 'Semua', cari = q.q ? q.q.toLowerCase() : '', data = null, pilih = '', arsip = false, dataArsip = null;
     const PS = Pilih(el, { onChange: () => barS() }), PL = { ids: () => [] };
     const barS = () => { const b = $('#bulk-s', el); if (b) b.innerHTML = bulkBarHTML(PS.ids().length, arsip ? `<button class="btn sm" data-bulk="pulih">${ic('refresh', 'sm')}Pulihkan</button>` : `<button class="btn sm danger" data-bulk="arsip">${ic('box', 'sm')}Arsipkan</button>`); };
-    el.innerHTML = `${kepala({ judul: 'Stok & opname', desc: 'Stok bertambah lewat belanja dan dikoreksi lewat opname (hitung fisik). Bahan yang tidak dipakai lagi bisa diarsipkan; riwayatnya tetap tersimpan.', acts: `<button class="btn" data-act="unduh">${ic('eye', 'sm')}Log opname</button><button class="btn" data-act="baru">${ic('plus', 'sm')}Bahan baru</button><button class="btn primary" data-act="massal">${ic('scale', 'sm')}Opname banyak bahan</button>` })}<div id="isi"></div>`;
+    el.innerHTML = `${kepala({ judul: 'Stok bahan', desc: 'Stok bertambah lewat belanja dan dikoreksi lewat opname (hitung fisik). Bahan yang tidak dipakai lagi bisa diarsipkan; riwayatnya tetap tersimpan.', acts: `<button class="btn" data-act="unduh">${ic('eye', 'sm')}Log opname</button><button class="btn" data-act="baru">${ic('plus', 'sm')}Bahan baru</button><button class="btn primary" data-act="massal">${ic('scale', 'sm')}Opname banyak bahan</button>` })}<div id="isi"></div>`;
     const isi = $('#isi', el);
     const gambar = (d) => {
       data = d; const rows = d.rows.filter((s) => !s.arsip), c = { Aman: 0, Menipis: 0, Kritis: 0, Habis: 0 }; rows.forEach((s) => c[s.status]++);
@@ -280,7 +280,7 @@ Pages.aset = {
     let kond = 'Semua', kat = 'Semua', cari = q.q ? q.q.toLowerCase() : '', hal = 1, data = null, dihapus = false, dataHapus = null;
     const P = Pilih(el, { onChange: () => bar() });
     const bar = () => { const b = $('#bulk', el); if (b) b.innerHTML = bulkBarHTML(P.ids().length, dihapus ? `<button class="btn sm" data-bulk="pulih">${ic('refresh', 'sm')}Pulihkan</button>` : `<button class="btn sm danger" data-bulk="hapus">${ic('trash', 'sm')}Hapus dari daftar</button>`); };
-    el.innerHTML = `${kepala({ judul: 'Aset & inventaris', desc: 'Perlengkapan gerobak, alat masak rempah, dan sarana lapak. Aset yang dihapus tetap tersimpan untuk riwayat dan bisa dipulihkan.', acts: `<button class="btn" data-act="unduh">${ic('eye', 'sm')}Laporan aset</button><button class="btn primary" data-act="baru">${ic('plus', 'sm')}Aset baru</button>` })}<div id="isi"></div>`;
+    el.innerHTML = `${kepala({ judul: 'Aset inventaris', desc: 'Perlengkapan gerobak, alat masak rempah, dan sarana lapak. Aset yang dihapus tetap tersimpan untuk riwayat dan bisa dipulihkan.', acts: `<button class="btn" data-act="unduh">${ic('eye', 'sm')}Laporan aset</button><button class="btn primary" data-act="baru">${ic('plus', 'sm')}Aset baru</button>` })}<div id="isi"></div>`;
     const isi = $('#isi', el);
     const gambar = (d) => {
       data = d; const s = d.ringkas;
