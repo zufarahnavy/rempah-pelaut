@@ -336,6 +336,7 @@ const App = {
     const view = lama.cloneNode(false);           // elemen baru = listener halaman lama tidak menumpuk
     view.className = 'content' + (pindah ? ' view' : ''); view.innerHTML = '';   // fade hanya saat pindah halaman, bukan saat segarkan
     lama.replaceWith(view);
+    Gerak.pasang(view, pindah);
     const it = navItem(name); document.title = (it ? it.l + ' — ' : '') + ((Store.app || {}).nama || '');
     try { this.cleanup = Pages[name].render(view, q) || null; } catch (e) { console.error(e); view.innerHTML = `<div class="card">${kosongHTML('Terjadi kesalahan saat menampilkan halaman: ' + e.message, 'alert')}</div>`; }
     if (pindah) window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });

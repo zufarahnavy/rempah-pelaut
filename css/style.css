@@ -465,9 +465,40 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 /* ============================ GERAK ============================
    Hanya satu transisi halaman yang tenang. Tidak ada animasi bertingkat
    (kartu tidak "berkedip" saat data diperbarui). */
-.view { animation: halaman .16s var(--ease) backwards; }
+.view { animation: halaman .22s var(--ease) backwards; }
 @keyframes halaman { from { opacity: 0; } }
-.anim > *, .stagger > *, .fade-swap, .insight { animation: none; }
+.view > .page-head { animation: naik .4s var(--ease) backwards; }
+/* ---------- Gerak (lihat js/gerak.js) ----------
+   fill-mode "backwards" disengaja: setelah selesai, animasi tidak meninggalkan transform
+   (transform yang tertinggal membuat elemen fixed di dalamnya — mis. sheet keranjang — salah posisi). */
+.masuk { animation: naik .5s var(--ease) backwards; animation-delay: var(--d, 0ms); }
+@keyframes naik { from { opacity: 0; transform: translateY(14px); } }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r) { animation: pudarNaik .38s var(--ease) backwards; animation-delay: calc(var(--d, 0ms) + 140ms + var(--r, 0) * 32ms); }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(2) { --r: 1; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(3) { --r: 2; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(4) { --r: 3; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(5) { --r: 4; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(6) { --r: 5; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(7) { --r: 6; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(8) { --r: 7; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(9) { --r: 8; }
+.masuk :is(tbody > tr, .li, .timeline > .ev, .hbar > .r, .menu-grid > *, .menu-list > .mrow, .insight, .sig, .donut-legend > .r):nth-child(n+10) { --r: 9; }
+.masuk .segbar { animation: buka .85s var(--ease) backwards; animation-delay: calc(var(--d, 0ms) + 180ms); }
+@keyframes buka { from { clip-path: inset(0 100% 0 0); } }
+.masuk .heat { animation: buka 1s var(--ease) backwards; animation-delay: calc(var(--d, 0ms) + 160ms); }
+.masuk .donut-center .v { animation: pudar .5s var(--ease) backwards; animation-delay: calc(var(--d, 0ms) + 350ms); }
+.ganti { animation: pudarNaik .26s var(--ease) backwards; }
+@keyframes pudarNaik { from { opacity: 0; transform: translateY(6px); } }
+.pop { animation: pop .26s var(--ease); display: inline-block; }
+@keyframes pop { 40% { transform: scale(1.22); } }
+/* sentuhan saat diarahkan (hanya perangkat bermouse) */
+.qa .chev { transition: transform .18s var(--ease); }
+@media (hover: hover) and (pointer: fine) {
+  .card.kpi, .qa, .mcard:not(.off), .preset, .user-pick button { transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .15s, background .15s; }
+  .card.kpi:hover, .mcard:not(.off):hover, .preset:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -10px rgba(42, 33, 24, .28); }
+  .qa:hover { transform: translateX(2px); } .qa:hover .chev { transform: translateX(3px); }
+}
+.btn:active:not(:disabled), .chip:active, .stepper button:active:not(:disabled), .pin-pad button:active { transform: scale(.97); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
 
 /* ============================ GRAFIK ============================ */
@@ -476,14 +507,15 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .chart .axis text { font-size: 11px; fill: var(--c-muted); font-variant-numeric: tabular-nums; font-family: var(--font-body); }
 .chart .grid line { stroke: var(--c-line); stroke-width: 1; }
 .chart .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.chart .ln.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: garis .8s var(--ease) forwards; }
+.chart .ln.draw { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: garis .9s var(--ease) forwards; }
+.chart .ar.draw { animation: pudar .9s var(--ease) backwards; }
+.chart .akhir.draw { animation: pudar .3s var(--ease) backwards; }
 @keyframes garis { to { stroke-dashoffset: 0; } }
 .chart .ar { opacity: .1; }
 .chart .grid line.nol { stroke: var(--c-muted); opacity: .6; }
 .legend-row { display: flex; gap: 16px; margin-top: 8px; padding-left: 50px; font-size: 12px; } .legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.chart .bar { transition: opacity .15s; transform-box: fill-box; transform-origin: bottom; animation: tumbuh .5s var(--ease) both; }
-.chart .bar.h { transform-origin: left; animation-name: tumbuhH; }
-.chart.diam .bar, .chart.diam .ln.draw { animation: none; stroke-dashoffset: 0; }
+.chart .bar { transition: opacity .15s; transform-box: fill-box; transform-origin: bottom; }
+.chart .bar.draw { animation: tumbuh .55s var(--ease) backwards; }
 @keyframes tumbuh { from { transform: scaleY(0); } } @keyframes tumbuhH { from { transform: scaleX(0); } }
 .chart:hover .bar.dim { opacity: .35; }
 .chart .hit { fill: transparent; cursor: crosshair; }

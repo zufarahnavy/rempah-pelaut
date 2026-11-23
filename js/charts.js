@@ -12,36 +12,30 @@ function posTip(el, tip, x, y) {
   let lx = x + 14; if (lx + tw > w) lx = x - tw - 14; if (lx < 0) lx = 4;
   tip.style.left = lx + 'px'; tip.style.top = Math.max(0, y - th / 2) + 'px';
 }
-/* Animasi grafik hanya sekali per elemen per halaman dalam satu sesi.
-   Render ulang (data segar dari server, ganti rentang, ubah ukuran layar) langsung tampil tanpa animasi,
-   sehingga tidak ada "kedip" ketika data cache diganti data terbaru. */
-const Gerak = {
-  kunci: new Set(),
-  diam: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-  boleh(el, nama) {
-    if (this.diam()) return false;
-    const k = (location.hash.split('?')[0] || '#/') + '|' + (nama || (el && el.id) || '');
-    if (!nama && !(el && el.id)) return true;
-    if (this.kunci.has(k)) return false;
-    this.kunci.add(k); return true;
-  }
-};
+/* Kunci linimasa grafik: id elemen (atau urutannya di halaman) + jenis grafik */
+function kunciGrafik(el, jenis) { const v = el.closest('.content') || document; return 'g|' + jenis + '|' + (el.id || $$('.chart', v).indexOf(el)); }
 function amatiUkuran(el, draw) {
-  let w = el.clientWidth; draw(!Gerak.boleh(el));
+  let w = el.clientWidth; draw(false);
   if (el._ro) el._ro.disconnect();
-  el._ro = new ResizeObserver(debounce(() => { if (Math.abs(el.clientWidth - w) > 8) { w = el.clientWidth; draw(true); } }, 120));
+  el._ro = new ResizeObserver(debounce(() => { if (Math.abs(el.clientWidth - w) > 8) { w = el.clientWidth; draw(true); } }, 120));   // ubah ukuran layar: gambar ulang tanpa animasi
   el._ro.observe(el);
 }
+const lerpDeret = (a, b, e) => ({
+  max: a.max + (b.max - a.max) * e,
+  s: b.s.map((v, si) => { const p = Gerak.sampel(a.s[si] || v, v.length); return v.map((x, i) => p[i] + (x - p[i]) * e); }),
+  baru: b.s.map((_, si) => !a.s[si])
+});
 
 /* ---------- Grafik garis / area ---------- */
 function grafikGaris(el, cfg) {
   el.classList.add('chart');
-  const draw = (tanpaAnim) => {
+  const kunci = kunciGrafik(el, 'garis');
+  const draw = (ukuran) => {
     const W = Math.max(280, el.clientWidth), H = cfg.height || 240, pl = 54, pr = cfg.endLabel === false ? 14 : 62, pt = 16, pb = 28;
     const n = cfg.labels.length, all = [].concat(...cfg.series.map((s) => s.values));
-    const max = niceMax(Math.max(1, ...all)), min = 0;
+    const max = niceMax(Math.max(1, ...all));
     const X = (i) => pl + (n <= 1 ? (W - pl - pr) / 2 : i * (W - pl - pr) / (n - 1));
-    const Y = (v) => pt + (H - pt - pb) * (1 - (v - min) / (max - min));
+    const Yv = (v, mx) => pt + (H - pt - pb) * (1 - v / (mx || 1)), Y = (v) => Yv(v, max);
     const fy = cfg.fmtY || kompak, fx = cfg.fmtX || ((l) => l);
     let g = '<g class="grid">';
     for (let i = 0; i <= 4; i++) { const v = max / 4 * i; g += `<line x1="${pl}" x2="${W - pr + 6}" y1="${Y(v)}" y2="${Y(v)}"/>`; }
@@ -50,20 +44,32 @@ function grafikGaris(el, cfg) {
     const step = Math.max(1, Math.ceil(n / Math.max(2, Math.floor((W - pl - pr) / 70))));
     for (let i = 0; i < n; i += step) g += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle">${esc(fx(cfg.labels[i], i))}</text>`;
     g += '</g>';
-    const jalur = (vals) => vals.map((v, i) => { if (i === 0) return `M${X(0)},${Y(v)}`; const x0 = X(i - 1), x1 = X(i), dx = (x1 - x0) / 3; return `C${x0 + dx},${Y(vals[i - 1])} ${x1 - dx},${Y(v)} ${x1},${Y(v)}`; }).join('');
+    const jalur = (vals, mx) => vals.map((v, i) => { if (i === 0) return `M${X(0)},${Yv(v, mx)}`; const x0 = X(i - 1), x1 = X(i), dx = (x1 - x0) / 3; return `C${x0 + dx},${Yv(vals[i - 1], mx)} ${x1 - dx},${Yv(v, mx)} ${x1},${Yv(v, mx)}`; }).join('');
+    const areaDari = (vals, mx) => jalur(vals, mx) + `L${X(n - 1)},${Yv(0, mx)}L${X(0)},${Yv(0, mx)}Z`;
+    const mode = ukuran ? { jenis: 'diam' } : Gerak.grafik(kunci, { max, s: cfg.series.map((x) => x.values.slice()) }, lerpDeret);
+    const masuk = mode.jenis === 'masuk', tunda = (ms) => masuk ? `animation-delay:${Math.round(ms - mode.lewat)}ms` : '';
     let p = '';
     cfg.series.forEach((s, si) => {
-      const c = s.color || SERI[si], d = jalur(s.values);
-      if (s.area !== false && cfg.series.length <= 2) p += `<path class="ar" d="${d}L${X(n - 1)},${Y(0)}L${X(0)},${Y(0)}Z" fill="${c}"/>`;
-      p += `<path class="ln ${tanpaAnim ? '' : 'draw'}" d="${d}" stroke="${c}" ${s.dash ? 'stroke-dasharray="5 5"' : ''}/>`;
+      const c = s.color || SERI[si], d = jalur(s.values, max);
+      if (s.area !== false && cfg.series.length <= 2) p += `<path class="ar ${masuk ? 'draw' : ''}" data-s="${si}" d="${areaDari(s.values, max)}" fill="${c}" style="${tunda(150)}"/>`;
+      p += `<path class="ln ${masuk ? 'draw' : ''}" data-s="${si}" d="${d}" stroke="${c}" ${s.dash ? 'stroke-dasharray="5 5"' : ''} style="${s.dash ? '' : tunda(0)}"/>`;
       const lv = s.values[n - 1];
-      if (!s.dash) p += `<circle cx="${X(n - 1)}" cy="${Y(lv)}" r="4.5" fill="${c}" stroke="var(--c-card)" stroke-width="2"/>`;
-      if (cfg.endLabel !== false && !s.dash) p += `<text class="endlbl" x="${X(n - 1) + 9}" y="${Y(lv) + 4}">${esc(fy(lv))}</text>`;
+      if (!s.dash) p += `<circle class="akhir ${masuk ? 'draw' : ''}" data-s="${si}" cx="${X(n - 1)}" cy="${Y(lv)}" r="4.5" fill="${c}" stroke="var(--c-card)" stroke-width="2" style="${tunda(700)}"/>`;
+      if (cfg.endLabel !== false && !s.dash) p += `<text class="endlbl akhir ${masuk ? 'draw' : ''}" data-s="${si}" x="${X(n - 1) + 9}" y="${Y(lv) + 4}" style="${tunda(750)}">${esc(fy(lv))}</text>`;
     });
     const mk = cfg.series.map((s, si) => `<circle class="mk" r="5" fill="${s.color || SERI[si]}"/>`).join('');
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(cfg.aria || 'Grafik garis')}">${g}${p}<line class="xhair" y1="${pt}" y2="${H - pb}"/>${mk}<rect class="hit" x="${pl}" y="${pt}" width="${W - pl - pr}" height="${H - pt - pb}"/></svg>`;
-    if (!tanpaAnim) $$('.ln.draw', el).forEach((ln) => { const L = ln.getTotalLength ? ln.getTotalLength() : 1000; ln.style.setProperty('--len', L); });
-    const svg = $('svg', el), tip = tipEl(el), xh = $('.xhair', el), mks = $$('.mk', el), hit = $('.hit', el);
+    const svg = $('svg', el);
+    if (masuk) $$('.ln.draw', el).forEach((ln) => { const L = ln.getTotalLength ? ln.getTotalLength() : 1000; ln.style.setProperty('--len', L); });
+    if (mode.jenis === 'morph') Gerak.putar(mode.st, svg, (k, e) => {
+      k.s.forEach((vals, si) => {
+        const ln = $(`.ln[data-s="${si}"]`, svg), ar = $(`.ar[data-s="${si}"]`, svg), c = $(`circle.akhir[data-s="${si}"]`, svg), t = $(`text.akhir[data-s="${si}"]`, svg);
+        if (ln) ln.setAttribute('d', jalur(vals, k.max)); if (ar) ar.setAttribute('d', areaDari(vals, k.max));
+        if (c) c.setAttribute('cy', Yv(vals[n - 1], k.max)); if (t) { t.setAttribute('y', Yv(vals[n - 1], k.max) + 4); t.textContent = fy(vals[n - 1]); }
+        if (k.baru && k.baru[si]) [ln, ar, c, t].forEach((x) => { if (x) x.style.opacity = e; });
+      });
+    });
+    const tip = tipEl(el), xh = $('.xhair', el), mks = $$('.mk', el), hit = $('.hit', el);
     const gerak = (ev) => {
       const r = svg.getBoundingClientRect(), sx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
       const i = Math.max(0, Math.min(n - 1, Math.round((sx * (W / r.width) - pl) / ((W - pl - pr) / Math.max(1, n - 1)))));
@@ -82,7 +88,8 @@ function grafikGaris(el, cfg) {
 /* ---------- Grafik kolom ---------- */
 function grafikKolom(el, cfg) {
   el.classList.add('chart');
-  const draw = (tanpaAnim) => {
+  const kunci = kunciGrafik(el, 'kolom');
+  const draw = (ukuran) => {
     const W = Math.max(260, el.clientWidth), H = cfg.height || 220, pl = 50, pr = 10, pt = 22, pb = 28;
     const n = cfg.labels.length, vals = cfg.values, vmax = Math.max(0, ...vals), vmin = Math.min(0, ...vals);
     // skala mendukung nilai negatif: garis nol tetap jadi dasar batang, batang negatif tumbuh ke bawah
@@ -90,57 +97,78 @@ function grafikKolom(el, cfg) {
     if (vmin < 0) { step = niceMax((vmax - vmin) / 4); lo = -Math.ceil(-vmin / step) * step; hi = Math.max(step, Math.ceil(vmax / step) * step); }
     else { hi = niceMax(Math.max(1, vmax)); step = hi / 4; }
     const ticks = []; for (let t = lo; t <= hi + step / 1e6; t += step) ticks.push(Math.abs(t) < step / 1e6 ? 0 : t);
-    const band = (W - pl - pr) / n, bw = Math.min(24, band * .62), Y = (v) => pt + (H - pt - pb) * (hi - v) / (hi - lo), fy = cfg.fmtY || kompak;
+    const band = (W - pl - pr) / n, bw = Math.min(24, band * .62), Ys = (v, l, h) => pt + (H - pt - pb) * (h - v) / ((h - l) || 1), Y = (v) => Ys(v, lo, hi), fy = cfg.fmtY || kompak;
     let g = '<g class="grid">'; ticks.forEach((t) => { g += `<line x1="${pl}" x2="${W - pr}" y1="${Y(t)}" y2="${Y(t)}"${t === 0 && lo < 0 ? ' class="nol"' : ''}/>`; }); g += '</g><g class="axis">';
     ticks.forEach((t) => { g += `<text x="${pl - 8}" y="${Y(t) + 4}" text-anchor="end">${esc(fy(t))}</text>`; });
     const lompat = Math.max(1, Math.ceil(n / Math.floor((W - pl) / 44)));
     cfg.labels.forEach((l, i) => { if (i % lompat === 0) g += `<text x="${pl + band * i + band / 2}" y="${H - 8}" text-anchor="middle">${esc(cfg.fmtX ? cfg.fmtX(l, i) : l)}</text>`; });
     g += '</g>';
+    const bentuk = (i, v, l, h) => {
+      const x = pl + band * i + (band - bw) / 2, y = Ys(v, l, h), y0 = Ys(0, l, h), r = Math.min(4, bw / 2, Math.abs(y0 - y));
+      return v > 0 ? `M${x},${y0}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${y0}Z`
+        : v < 0 ? `M${x},${y0}V${y - r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y - r}V${y0}Z` : `M${x},${y0}H${x + bw}`;
+    };
+    const mode = ukuran ? { jenis: 'diam' } : Gerak.grafik(kunci, { v: vals.slice(), lo, hi }, (a, b, e) => { const p = Gerak.sampel(a.v, b.v.length); return { lo: a.lo + (b.lo - a.lo) * e, hi: a.hi + (b.hi - a.hi) * e, v: b.v.map((x, i) => p[i] + (x - p[i]) * e) }; });
+    const masuk = mode.jenis === 'masuk', tunda = (ms) => masuk ? `animation-delay:${Math.round(ms - mode.lewat)}ms` : '';
     const imax = vals.indexOf(Math.max(...vals));
     let b = '';
     vals.forEach((v, i) => {
-      const x = pl + band * i + (band - bw) / 2, y = Y(v), y0 = Y(0), r = Math.min(4, bw / 2, Math.abs(y0 - y));
       const warna = cfg.colorFn ? cfg.colorFn(v, i) : (cfg.color || 'var(--s1)');
-      const d = v > 0 ? `M${x},${y0}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${y0}Z`
-        : v < 0 ? `M${x},${y0}V${y - r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y - r}V${y0}Z` : '';
-      b += `<path class="bar" data-i="${i}" d="${d}" fill="${warna}" style="animation-delay:${tanpaAnim ? 0 : i * 18}ms${tanpaAnim ? ';animation:none' : ''}${v < 0 ? ';transform-origin:top' : ''}"/>`;
-      if (i === imax && v > 0 && cfg.labelMax !== false) b += `<text class="endlbl" x="${x + bw / 2}" y="${y - 7}" text-anchor="middle">${esc(fy(v))}</text>`;
-      b += `<rect class="hit" data-i="${i}" x="${pl + band * i}" y="${pt}" width="${band}" height="${H - pt - pb}"/>`;
+      b += `<path class="bar ${masuk ? 'draw' : ''}" data-i="${i}" d="${bentuk(i, v, lo, hi)}" fill="${warna}" style="${tunda(Math.min(i, 40) * 18)}${v < 0 ? ';transform-origin:top' : ''}"/>`;
     });
+    if (vals[imax] > 0 && cfg.labelMax !== false) b += `<text class="endlbl akhir ${masuk ? 'draw' : ''}" x="${pl + band * imax + band / 2}" y="${Y(vals[imax]) - 7}" text-anchor="middle" style="${tunda(550)}">${esc(fy(vals[imax]))}</text>`;
+    vals.forEach((v, i) => { b += `<rect class="hit" data-i="${i}" x="${pl + band * i}" y="${pt}" width="${band}" height="${H - pt - pb}"/>`; });
     if (cfg.garisTarget) { const yt = Y(cfg.garisTarget); b += `<line x1="${pl}" x2="${W - pr}" y1="${yt}" y2="${yt}" stroke="var(--c-secondary)" stroke-dasharray="4 4" opacity=".55"/><text x="${W - pr}" y="${yt - 5}" text-anchor="end" class="endlbl" style="font-size:10.5px;fill:var(--c-muted)">target ${esc(fy(cfg.garisTarget))}</text>`; }
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(cfg.aria || 'Grafik kolom')}">${g}${b}</svg>`;
-    const tip = tipEl(el), svg = $('svg', el);
+    const tip = tipEl(el), svg = $('svg', el), batang = $$('.bar', el), lbl = $('text.akhir', el);
+    if (mode.jenis === 'morph') Gerak.putar(mode.st, svg, (k) => {
+      batang.forEach((p, i) => p.setAttribute('d', bentuk(i, k.v[i], k.lo, k.hi)));
+      if (lbl) { lbl.setAttribute('y', Ys(k.v[imax], k.lo, k.hi) - 7); lbl.textContent = fy(k.v[imax]); }
+    });
     $$('.hit', el).forEach((h) => {
       const tampil = () => {
         const i = +h.dataset.i, r = svg.getBoundingClientRect();
-        $$('.bar', el).forEach((x) => x.classList.toggle('dim', x.dataset.i !== h.dataset.i));
+        batang.forEach((x) => x.classList.toggle('dim', x.dataset.i !== h.dataset.i));
         tip.innerHTML = `<div class="h">${esc(cfg.tipX ? cfg.tipX(cfg.labels[i], i) : cfg.labels[i])}</div><div class="r"><span>${esc(cfg.nama || 'Nilai')}</span><b>${esc((cfg.fmtTip || rp)(vals[i]))}</b></div>${cfg.tipExtra ? cfg.tipExtra(i) : ''}`;
         tip.classList.add('on'); posTip(el, tip, (pl + band * i + band / 2) * r.width / W, Y(vals[i]) * r.height / H);
       };
       h.addEventListener('mouseenter', tampil); h.addEventListener('touchstart', tampil, { passive: true });
-      h.addEventListener('mouseleave', () => { tip.classList.remove('on'); $$('.bar', el).forEach((x) => x.classList.remove('dim')); });
+      h.addEventListener('mouseleave', () => { tip.classList.remove('on'); batang.forEach((x) => x.classList.remove('dim')); });
     });
   };
   amatiUkuran(el, draw);
 }
 
-/* ---------- Donat ---------- */
+/* ---------- Donat: masuk dengan sapuan melingkar, berubah dengan morph porsi ---------- */
 function grafikDonat(el, cfg) {
   el.classList.add('chart');
-  const S = cfg.size || 170, R = S / 2 - 12, sw = cfg.tebal || 20, total = cfg.items.reduce((a, x) => a + Math.max(0, x.value), 0) || 1;
-  let a0 = -Math.PI / 2, p = '';
-  const gapA = 2 / R;
-  cfg.items.forEach((it, i) => {
-    const frac = Math.max(0, it.value) / total; if (frac <= 0) return;
-    const a1 = a0 + frac * Math.PI * 2, s = a0 + (frac < 1 ? gapA / 2 : 0), e = a1 - (frac < 1 ? gapA / 2 : 0.0001);
-    const large = e - s > Math.PI ? 1 : 0, c = S / 2;
-    p += `<path data-i="${i}" d="M${c + R * Math.cos(s)},${c + R * Math.sin(s)}A${R},${R} 0 ${large} 1 ${c + R * Math.cos(e)},${c + R * Math.sin(e)}" fill="none" stroke="${it.color || SERI[i]}" stroke-width="${sw}" stroke-linecap="butt" style="transition:stroke-width .2s;cursor:pointer"/>`;
-    a0 = a1;
-  });
+  const S = cfg.size || 170, R = S / 2 - 12, sw = cfg.tebal || 20, c = S / 2, total = cfg.items.reduce((a, x) => a + Math.max(0, x.value), 0) || 1;
+  const gapA = 2 / R, nama = (it, i) => it.name || String(i);
+  const ke = { sapu: 1, f: Object.fromEntries(cfg.items.map((it, i) => [nama(it, i), Math.max(0, it.value) / total])) };
+  const busur = (s, e) => `M${c + R * Math.cos(s)},${c + R * Math.sin(s)}A${R},${R} 0 ${e - s > Math.PI ? 1 : 0} 1 ${c + R * Math.cos(e)},${c + R * Math.sin(e)}`;
+  const gambarBusur = (k) => {
+    let a0 = -Math.PI / 2; const d = [];
+    const jumlah = cfg.items.filter((it, i) => (k.f[nama(it, i)] || 0) > 0.0005).length;
+    cfg.items.forEach((it, i) => {
+      const frac = (k.f[nama(it, i)] || 0) * k.sapu;
+      if (frac <= 0.0005) { d.push(''); return; }
+      const a1 = a0 + frac * Math.PI * 2, pisah = jumlah > 1 && frac < 1;
+      const s = a0 + (pisah ? gapA / 2 : 0), e = Math.max(s + 0.0001, a1 - (pisah ? gapA / 2 : 0.0001));
+      d.push(busur(s, e)); a0 = a1;
+    });
+    return d;
+  };
+  const mode = Gerak.grafik(kunciGrafik(el, 'donat'), ke, (a, b, e) => {
+    const f = {}; new Set(Object.keys(a.f).concat(Object.keys(b.f))).forEach((k) => { f[k] = (a.f[k] || 0) + ((b.f[k] || 0) - (a.f[k] || 0)) * e; });
+    return { sapu: a.sapu + (b.sapu - a.sapu) * e, f };
+  }, { awal: { sapu: 0, f: ke.f }, durMasuk: 850, durMorph: 600 });
+  const akhir = gambarBusur(ke);
   el.style.width = S + 'px';
-  el.innerHTML = `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="${esc(cfg.aria || 'Grafik donat')}"><circle cx="${S / 2}" cy="${S / 2}" r="${R}" fill="none" stroke="var(--c-inset)" stroke-width="${sw}"/><g style="transform-origin:center;${Gerak.boleh(el) ? 'animation:muncul .5s var(--ease)' : ''}">${p}</g></svg>${cfg.center ? `<div class="donut-center"><div><div class="v">${esc(cfg.center.v)}</div><div class="l">${esc(cfg.center.l)}</div></div></div>` : ''}`;
+  el.innerHTML = `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" role="img" aria-label="${esc(cfg.aria || 'Grafik donat')}"><circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="var(--c-inset)" stroke-width="${sw}"/><g>${cfg.items.map((it, i) => `<path data-i="${i}" d="${akhir[i]}" fill="none" stroke="${it.color || SERI[i]}" stroke-width="${sw}" stroke-linecap="butt" style="transition:stroke-width .2s;cursor:pointer"/>`).join('')}</g></svg>${cfg.center ? `<div class="donut-center"><div><div class="v">${esc(cfg.center.v)}</div><div class="l">${esc(cfg.center.l)}</div></div></div>` : ''}`;
+  const svg = $('svg', el), jalur = $$('path', svg);
+  if (mode.jenis === 'morph') Gerak.putar(mode.st, svg, (k) => { gambarBusur(k).forEach((d, i) => jalur[i].setAttribute('d', d)); });
   const tip = tipEl(el);
-  $$('path', el).forEach((pa) => {
+  jalur.forEach((pa) => {
     const it = cfg.items[+pa.dataset.i];
     const on = () => { pa.setAttribute('stroke-width', sw + 5); tip.innerHTML = `<div class="h">${esc(it.name)}</div><div class="r"><span>Nilai</span><b>${esc((cfg.fmt || fmtNum)(it.value))}</b></div><div class="r"><span>Porsi</span><b>${fmtNum(it.value / total * 100, 1)}%</b></div>`; tip.classList.add('on'); tip.style.left = (S / 2 - 70) + 'px'; tip.style.top = (S / 2 - 30) + 'px'; };
     pa.addEventListener('mouseenter', on); pa.addEventListener('touchstart', on, { passive: true });
@@ -156,14 +184,26 @@ function hbarHTML(items, opt = {}) {
   const max = Math.max(1, ...items.map((x) => x.value));
   return `<div class="hbar">${items.map((it, i) => `<div class="r"><div class="nm">${it.foto ? `<img class="thumb s" src="${esc(it.foto)}" alt="" loading="lazy">` : `<i class="sw" style="background:${it.color || opt.color || 'var(--s1)'}"></i>`}<span class="truncate">${esc(it.name)}</span>${it.badge || ''}</div><div class="v">${esc((opt.fmt || fmtNum)(it.value))}${it.sub ? ` <span class="xs">${esc(it.sub)}</span>` : ''}</div><div class="track"><i data-w="${(it.value / max * 100).toFixed(1)}" style="background:${it.color || opt.color || 'var(--s1)'}"></i></div></div>`).join('')}</div>`;
 }
+/* Batang horizontal & meter: tumbuh saat pertama tampil, bergeser mulus dari lebar lama saat nilainya berubah */
 function animasiBatang(root) {
-  const el = $$('.track i[data-w], .meter > i[data-w]', root); if (!el.length) return;
-  if (!Gerak.boleh(null, 'batang|' + (root.id || root.className || ''))) {   // render ulang: langsung ke ukuran akhir, tanpa transisi
-    el.forEach((i) => { i.style.transition = 'none'; i.style.width = Math.max(0, Math.min(100, +i.dataset.w || 0)) + '%'; });
-    requestAnimationFrame(() => el.forEach((i) => { i.style.transition = ''; }));
-    return;
-  }
-  requestAnimationFrame(() => setTimeout(() => el.forEach((i) => { i.style.width = Math.max(0, Math.min(100, +i.dataset.w || 0)) + '%'; }), 40));
+  const view = (root.closest && root.closest('.content')) || root, SEL = '.track i[data-w], .meter > i[data-w]';
+  const el = $$(SEL, root); if (!el.length) return;
+  const semua = $$(SEL, view), now = Gerak.sekarang(), diam = Gerak.diam();
+  let urut = 0;
+  el.forEach((i) => {
+    const ke = Math.max(0, Math.min(100, +i.dataset.w || 0)), kunci = 'bar|' + semua.indexOf(i);
+    let st = Gerak.data.get(kunci);
+    if (!st) { st = { dari: diam ? ke : 0, ke, t0: now + Math.min(urut++, 10) * 40 + 120, dur: 750 }; Gerak.data.set(kunci, st); }
+    else if (st.ke !== ke) { st.dari = Gerak.nilaiKini(st, now); st.ke = ke; st.t0 = now; st.dur = 500; }
+    const kini = Gerak.nilaiKini(st, now), selesai = st.t0 + st.dur;
+    i.style.transition = 'none'; i.style.width = kini + '%';
+    if (!diam && now < selesai && kini !== ke) {
+      void i.offsetWidth;
+      const tunda = Math.max(0, st.t0 - now);
+      i.style.transition = `width ${Math.round(selesai - Math.max(now, st.t0))}ms cubic-bezier(.2,.7,.2,1) ${Math.round(tunda)}ms`;
+      i.style.width = ke + '%';
+    }
+  });
 }
 /* ---------- Batang tersegmen (satu keseluruhan dibagi bagian) ---------- */
 function segbarHTML(items, fmt = fmtNum) {

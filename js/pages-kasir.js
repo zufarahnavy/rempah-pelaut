@@ -226,7 +226,7 @@ Pages.pos = {
       const grup = {}; list.forEach((m) => { (grup[m.kategori] = grup[m.kategori] || []).push(m); });
       katalog.innerHTML = `<div class="menu-list">${Object.keys(grup).map((g) => `${kat === 'Semua' ? `<div class="grp-h">${esc(g)}</div>` : ''}${grup[g].map((m, i) => barisMenu(m, i === grup[g].length - 1)).join('')}`).join('')}</div>`;
     };
-    const itemsHTML = (dipilih) => dipilih.length ? dipilih.map((m) => `<div class="cart-item"><span class="q">${cart.items[m.id]}×</span><div style="min-width:0"><div class="nm">${esc(m.nama)}</div><div class="sub">${rp(hargaDari(m))} / cup</div></div><span class="v">${rp(cart.items[m.id] * hargaDari(m))}</span><button class="x" data-hapus="${m.id}" aria-label="Hapus ${esc(m.nama)}">${ic('x', 'sm')}</button></div>`).join('') : `<div class="cart-empty">${ic('cup')}<div>Belum ada menu dipilih.</div></div>`;
+    const itemsHTML = (dipilih) => dipilih.length ? dipilih.map((m) => `<div class="cart-item" data-cid="${m.id}"><span class="q">${cart.items[m.id]}×</span><div style="min-width:0"><div class="nm">${esc(m.nama)}</div><div class="sub">${rp(hargaDari(m))} / cup</div></div><span class="v">${rp(cart.items[m.id] * hargaDari(m))}</span><button class="x" data-hapus="${m.id}" aria-label="Hapus ${esc(m.nama)}">${ic('x', 'sm')}</button></div>`).join('') : `<div class="cart-empty">${ic('cup')}<div>Belum ada menu dipilih.</div></div>`;
     const gambarCart = () => {
       const t = total(), dipilih = menu().filter((m) => cart.items[m.id]);
       if (tutup()) {
@@ -247,6 +247,11 @@ Pages.pos = {
           <div class="row" style="padding:0 12px 12px"><button class="btn" data-act="reset" ${t.cup || t.masuk ? '' : 'disabled'}>Kosongkan</button><button class="btn primary grow" data-act="simpan" ${!t.masuk ? 'disabled' : ''}>${ic('check', 'sm')}Simpan transaksi</button></div>
           ${!Net.up ? `<div class="small muted" style="padding:0 12px 12px">Offline — transaksi disimpan sebagai Pending lalu dikirim otomatis.</div>` : ''}${koreksi ? `<div class="small warn" style="padding:0 12px 12px">Mode koreksi Owner: transaksi masuk ke hari yang sudah closing.</div>` : ''}</div>
       </div>`;
+      /* gerak kecil: baris menu baru meluncur masuk, jumlah yang berubah berdenyut */
+      const lalu = cartEl._qty;
+      if (lalu) dipilih.forEach((m) => { const r = $(`[data-cid="${m.id}"]`, cartEl); if (!r) return; if (!lalu[m.id]) r.classList.add('ganti'); else if (lalu[m.id] !== cart.items[m.id]) Gerak.pop($('.q', r)); });
+      if (lalu && Object.values(lalu).reduce((a, x) => a + x, 0) !== t.cup) Gerak.pop($('.struk-head .badge', cartEl));
+      cartEl._qty = Object.assign({}, cart.items);
       $$('.seg', cartEl).forEach((s, i) => pasangSeg(s, (v) => { if (i === 0) cart.metode = v; else cart.jenis = v; simpanCart(); }));
       ['tips', 'acara'].forEach((k) => { const inp = $('#' + k, cartEl); inp.addEventListener('input', () => { cart[k] = angkaRp(inp, k === 'tips' ? 'Tips' : 'Pesanan acara'); simpanCart(); segarTotal(); }); inp.addEventListener('change', () => gambarCart()); });
       $('#catatan', cartEl).addEventListener('input', (e) => { cart.catatan = e.target.value; simpanCart(); });
@@ -268,7 +273,7 @@ Pages.pos = {
       const node = $(`[data-id="${id}"].mcard, [data-id="${id}"].mrow`, katalog);
       if (node && m) {
         if (m.dinamis && (Store.aturan.ubahHarga || Store.owner()) && (sebelum === 0 || qn === 0)) { const w = document.createElement('div'); w.innerHTML = tampilan === 'grid' ? kartuMenu(m) : barisMenu(m, node.classList.contains('last')); node.replaceWith(w.firstElementChild); }
-        else { node.classList.toggle('has', !!qn); const pill = $('.qty-pill', node); if (pill) pill.textContent = qn + '×'; $('#v-' + id, node).textContent = qn; const mn = $('[data-min]', node); if (mn) mn.disabled = !qn; }
+        else { node.classList.toggle('has', !!qn); const pill = $('.qty-pill', node); if (pill) { pill.textContent = qn + '×'; Gerak.pop(pill); } $('#v-' + id, node).textContent = qn; Gerak.pop($('#v-' + id, node)); const mn = $('[data-min]', node); if (mn) mn.disabled = !qn; }
       }
       gambarCart();
     };

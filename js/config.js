@@ -4,5 +4,5 @@
    Ganti teks GANTI_DENGAN_ID_DEPLOYMENT dengan URL hasil Deploy → Web app.
    ===================================================================== */
 window.APP_CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzskr3TwsLmGOxDwwsVJkTAKwKsFlEEFtnNAIgnE4ylpEZABXe6pKR0ELNKnCx2e_5f/exec'
+  GAS_URL: 'https://script.google.com/macros/s/GANTI_DENGAN_ID_DEPLOYMENT/exec'
 };

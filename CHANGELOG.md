@@ -5,7 +5,11 @@
 **Tampilan**
 - Gaya baru "kedai hangat & rapi": datar, tanpa gradasi dan efek kaca, satu keluarga huruf (Plus Jakarta Sans), label kalimat biasa.
 - Angka Total masuk di beranda/POS tidak lagi terpotong.
-- Grafik dan batang hanya beranimasi sekali per halaman; data yang diperbarui tampil tanpa kedip. Loader hanya muncul bila proses lebih dari 0,65 detik.
+- Sistem gerak baru (`js/gerak.js`): kartu masuk bertahap, baris tabel menyusul, angka KPI menghitung naik, garis tergambar, kolom tumbuh, donat menyapu melingkar.
+- Morph: saat rentang/data berubah, garis, kolom, donat, batang, dan angka bergerak mulus dari nilai lama ke nilai baru (tidak digambar ulang dari nol).
+- Anti-kedip: animasi terikat ke linimasa, bukan elemen. Bila data segar datang di tengah animasi, animasi dilanjutkan dari titik yang sama.
+- Sentuhan kecil: kartu terangkat saat diarahkan kursor, tombol mengecil saat ditekan, jumlah di POS berdenyut, baris pesanan baru meluncur masuk.
+- Menghormati setelan "kurangi gerakan" di perangkat. Loader hanya muncul bila proses lebih dari 0,65 detik.
 - Gambar `assets/img/ilustrasi-cangkir.svg` (404) dihapus; ikon digambar langsung oleh aplikasi.
 
 **POS**

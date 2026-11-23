@@ -4,7 +4,7 @@
    - Gambar di assets/: cache dulu (jarang berubah).
    - Permintaan ke Apps Script (lintas domain) tidak disentuh — antrean offline diurus js/core.js. */
 const VERSI = 'rp-1.1.0';
-const CANGKANG = ['./', 'index.html', 'verify.html', 'css/style.css?v=1.1.0', 'js/config.js?v=1.1.0', 'js/core.js?v=1.1.0', 'js/charts.js?v=1.1.0', 'js/qr.js?v=1.1.0', 'js/app.js?v=1.1.0', 'js/pages-kasir.js?v=1.1.0', 'js/pages-owner.js?v=1.1.0', 'js/pages-gudang.js?v=1.1.0', 'js/pages-admin.js?v=1.1.0', 'assets/logo.svg', 'assets/img/menu/default.svg', 'assets/img/bahan/default.svg', 'assets/img/aset/lainnya.svg', 'manifest.webmanifest'];
+const CANGKANG = ['./', 'index.html', 'verify.html', 'css/style.css?v=1.1.0', 'js/config.js?v=1.1.0', 'js/core.js?v=1.1.0', 'js/gerak.js?v=1.1.0', 'js/charts.js?v=1.1.0', 'js/qr.js?v=1.1.0', 'js/app.js?v=1.1.0', 'js/pages-kasir.js?v=1.1.0', 'js/pages-owner.js?v=1.1.0', 'js/pages-gudang.js?v=1.1.0', 'js/pages-admin.js?v=1.1.0', 'assets/logo.svg', 'assets/img/menu/default.svg', 'assets/img/bahan/default.svg', 'assets/img/aset/lainnya.svg', 'manifest.webmanifest'];
 /* satu berkas gagal (mis. 404) tidak boleh menggagalkan seluruh pemasangan */
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSI).then((c) => Promise.all(CANGKANG.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSI).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

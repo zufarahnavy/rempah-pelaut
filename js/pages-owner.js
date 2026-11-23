@@ -53,9 +53,8 @@ Pages.dashboard = {
           </div>
         </div></div>`;
       animasiBatang(el);
-      ['k1', 'k3'].forEach((id) => { const e2 = $('#' + id, el); if (e2) { const v = id === 'k1' ? k.omset : k.saldo; e2.dataset.v = 0; animasiAngka(e2, v); } });
       grafikDonat($('#donut-stok', el), { items: [{ name: 'Aman', value: d.stok.hitung.Aman, color: 'var(--c-success)' }, { name: 'Menipis', value: d.stok.hitung.Menipis, color: 'var(--c-warning)' }, { name: 'Kritis/Habis', value: d.stok.hitung.Kritis + d.stok.hitung.Habis, color: 'var(--c-danger)' }], center: { v: d.stok.total, l: 'bahan' }, size: 150, fmt: (v) => v + ' bahan' });
-      $('#rg', el).innerHTML = segHTML([{ v: '7', l: '7 Hari' }, { v: '30', l: '30 Hari' }], rentang);
+      $('#rg', el).innerHTML = segHTML([{ v: '7', l: '7 hari' }, { v: '30', l: '30 hari' }], rentang);
       pasangSeg($('#rg .seg', el), (v) => { rentang = v; tren(d); });
       tren(d); buku(d);
       $('#cari', el).addEventListener('input', debounce((e) => { cari = e.target.value.toLowerCase(); hal = 1; buku(d); }, 200));
@@ -70,7 +69,7 @@ Pages.dashboard = {
     };
     const buku = (d) => {
       const t = hariIni();
-      const f = { Semua: () => true, 'Hari Ini': (b) => b.tanggal === t, 'Terkunci / Closing': (b) => b.status === 'Terkunci' || b.jenis === 'CLOSING', 'Belanja Bahan': (b) => b.jenis === 'BELANJA' };
+      const f = { Semua: () => true, 'Hari ini': (b) => b.tanggal === t, 'Sudah closing': (b) => b.status === 'Terkunci' || b.jenis === 'CLOSING', 'Belanja bahan': (b) => b.jenis === 'BELANJA' };
       $('#tabs', el).innerHTML = Object.keys(f).map((k) => `<button class="chip ${k === tab ? 'on' : ''}" data-tab="${k}">${k} <span class="n">(${d.buku.filter(f[k]).length})</span></button>`).join('');
       const rows = d.buku.filter(f[tab]).filter((b) => !cari || (b.id + ' ' + b.ket + ' ' + b.sub + ' ' + b.jenis).toLowerCase().includes(cari));
       const per = 7, page = rows.slice((hal - 1) * per, hal * per);
@@ -97,8 +96,8 @@ Pages.analitik = {
   render(el, q) {
     let preset = q.p || '30', tampil = 'harian', dari = q.dari, sampai = q.sampai;
     const param = () => preset === 'kustom' && dari && sampai ? { dari, sampai } : Param.analitik(preset);
-    el.innerHTML = `${kepala({ eyebrow: 'Wawasan Bisnis', judul: 'Analitik Penjualan', desc: 'Tren omset, menu terlaris, pola jam ramai, komposisi pembayaran, dan laba-rugi kas — semua dihitung otomatis dari buku kasir.', acts: `<div id="preset"></div><div class="row gap-8 hidden" id="kustom"><input type="date" class="input" id="d1" style="max-width:160px"><input type="date" class="input" id="d2" style="max-width:160px"><button class="btn primary sm" id="terap">Terapkan</button></div>` })}<div id="isi"></div>`;
-    $('#preset', el).innerHTML = segHTML([{ v: '7', l: '7 Hari' }, { v: '30', l: '30 Hari' }, { v: '90', l: '90 Hari' }, { v: 'bulan', l: 'Bulan Ini' }, { v: 'kustom', l: 'Kustom' }], preset);
+    el.innerHTML = `${kepala({ judul: 'Analitik penjualan', desc: 'Tren pemasukan, menu terlaris, jam ramai, cara bayar, dan laba-rugi kas. Semua dihitung dari buku kasir.', acts: `<div id="preset"></div><div class="row gap-8 hidden" id="kustom"><input type="date" class="input" id="d1" style="max-width:160px"><input type="date" class="input" id="d2" style="max-width:160px"><button class="btn primary sm" id="terap">Terapkan</button></div>` })}<div id="isi"></div>`;
+    $('#preset', el).innerHTML = segHTML([{ v: '7', l: '7 hari' }, { v: '30', l: '30 hari' }, { v: '90', l: '90 hari' }, { v: 'bulan', l: 'Bulan ini' }, { v: 'kustom', l: 'Pilih tanggal' }], preset);
     pasangSeg($('#preset .seg', el), (v) => { preset = v; $('#kustom', el).classList.toggle('hidden', v !== 'kustom'); if (v !== 'kustom') muat(); });
     $('#d1', el).value = Param.analitik('30').dari; $('#d2', el).value = hariIni(); $('#d2', el).max = hariIni();
     $('#terap', el).onclick = () => { dari = $('#d1', el).value; sampai = $('#d2', el).value; if (!dari || !sampai || dari > sampai) return toast('Rentang tanggal tidak valid.', 'warning'); muat(); };
@@ -109,37 +108,37 @@ Pages.analitik = {
       isi.innerHTML = `<div class="stack anim">
         <div class="row wrap gap-8 small muted">${ic('calendar', 'sm')}Periode <b style="color:var(--c-text)">${tgl(d.periode.dari, 'd MMM yyyy')} – ${tgl(d.periode.sampai, 'd MMM yyyy')}</b> (${d.periode.hari} hari) dibanding ${tgl(d.prev.dari, 'd MMM')} – ${tgl(d.prev.sampai, 'd MMM yyyy')}</div>
         <div class="grid g-4 kpis">
-          ${kartu('Total Pemasukan', 'cash', 'warning', rp(s.masuk), s.masuk, p.masuk)}
-          ${kartu('Cup Terjual', 'cup', 'info', fmtNum(s.cup) + ' <small>cup</small>', s.cup, p.cup, false, fmtNum(s.avgCupHari, 1) + ' cup/hari')}
-          ${kartu('Laba Kas', 'trend-up', 'success', rp(s.laba), s.laba, p.laba, false, 'margin ' + fmtNum(s.margin, 1) + '%')}
-          ${kartu('Rata-rata / Transaksi', 'receipt', 'wood', rp(s.avgTrx), s.avgTrx, p.avgTrx, false, fmtNum(s.trx) + ' trx • ' + fmtNum(s.avgCupTrx, 1) + ' cup/trx')}
+          ${kartu('Total pemasukan', 'cash', 'warning', rp(s.masuk), s.masuk, p.masuk)}
+          ${kartu('Cup terjual', 'cup', 'info', fmtNum(s.cup) + ' <small>cup</small>', s.cup, p.cup, false, fmtNum(s.avgCupHari, 1) + ' cup/hari')}
+          ${kartu('Laba kas', 'trend-up', 'success', rp(s.laba), s.laba, p.laba, false, 'margin ' + fmtNum(s.margin, 1) + '%')}
+          ${kartu('Rata-rata per transaksi', 'receipt', 'wood', rp(s.avgTrx), s.avgTrx, p.avgTrx, false, fmtNum(s.trx) + ' trx • ' + fmtNum(s.avgCupTrx, 1) + ' cup/trx')}
         </div>
         <div class="grid g-main">
-          <div class="card"><div class="card-head"><div><h2>Tren Pemasukan</h2><div class="sub">Garis putus-putus = periode sebelumnya (hanya tampilan harian)</div></div><div id="tg"></div></div><div id="g-tren"></div><div class="legend mt-8" id="lg-tren"></div></div>
-          <div class="card"><div class="card-head"><div><h3>Wawasan Otomatis</h3><div class="sub">Disusun dari data periode ini</div></div><span class="icon-box s">${ic('bulb', 'sm')}</span></div>${d.insight.map((x, i) => `<div class="insight" style="animation-delay:${i * 60}ms"><span class="icon-box s ${x.ikon === 'down' ? 'danger' : x.ikon === 'up' ? 'success' : ''}">${ic({ up: 'trend-up', down: 'trend-down', calendar: 'calendar', clock: 'clock', star: 'star', trend: 'sparkle', target: 'target' }[x.ikon] || 'info', 'sm')}</span><div class="small">${esc(x.teks)}</div></div>`).join('') || kosongHTML('Belum cukup data', 'bulb')}</div>
+          <div class="card"><div class="card-head"><div><h2>Tren pemasukan</h2><div class="sub">Garis putus-putus: periode sebelumnya (tampilan harian)</div></div><div id="tg"></div></div><div id="g-tren"></div><div class="legend mt-8" id="lg-tren"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Catatan periode ini</h3><div class="sub">Disusun otomatis dari data</div></div><span class="icon-box s">${ic('bulb', 'sm')}</span></div>${d.insight.map((x, i) => `<div class="insight" style="animation-delay:${i * 60}ms"><span class="icon-box s ${x.ikon === 'down' ? 'danger' : x.ikon === 'up' ? 'success' : ''}">${ic({ up: 'trend-up', down: 'trend-down', calendar: 'calendar', clock: 'clock', star: 'star', trend: 'sparkle', target: 'target' }[x.ikon] || 'info', 'sm')}</span><div class="small">${esc(x.teks)}</div></div>`).join('') || kosongHTML('Belum cukup data', 'bulb')}</div>
         </div>
         <div class="grid g-2">
-          <div class="card"><div class="card-head"><div><h3>Laba-Rugi Berbasis Kas</h3><div class="sub">Pemasukan − biaya operasional − belanja bahan (tanpa penyusutan)</div></div></div>
+          <div class="card"><div class="card-head"><div><h3>Laba-rugi kas</h3><div class="sub">Pemasukan − biaya operasional − belanja bahan (tanpa penyusutan)</div></div></div>
             ${[['Total pemasukan', s.masuk, 'var(--c-success)', 'POS ' + rpK(s.omset) + ' • acara ' + rpK(s.acara) + ' • tips ' + rpK(s.tips)], ['Biaya operasional', -s.ops, 'var(--c-danger)', fmtNum(s.masuk ? s.ops / s.masuk * 100 : 0, 1) + '% dari pemasukan'], ['Belanja bahan baku', -s.belanja, 'var(--c-warning)', fmtNum(s.masuk ? s.belanja / s.masuk * 100 : 0, 1) + '% dari pemasukan']].map((r) => `<div class="mt-12"><div class="row between small"><span class="strong">${r[0]}</span><b class="tnum ${r[1] < 0 ? 'bad' : 'ok'}">${r[1] < 0 ? '-' : ''}${rp(Math.abs(r[1]))}</b></div><div class="meter mt-4"><i data-w="${s.masuk ? Math.abs(r[1]) / s.masuk * 100 : 0}" style="background:${r[2]}"></i></div><div class="xs muted mt-4">${r[3]}</div></div>`).join('')}
             <div class="big-total mt-16"><div><b>Laba kas periode</b><div class="xs muted">Margin ${fmtNum(s.margin, 1)}%</div></div><span class="v">${rp(s.laba)}</span></div>
           </div>
-          <div class="card"><div class="card-head"><div><h3>Laba Kas Harian</h3><div class="sub">Kolom per hari; kolom di bawah garis nol = rugi kas (biasanya hari gajian / belanja besar)</div></div></div><div id="g-laba"></div><div class="legend-row xs muted"><span><i style="background:var(--s3)"></i>Laba</span><span><i style="background:var(--s5)"></i>Rugi kas</span></div></div>
+          <div class="card"><div class="card-head"><div><h3>Laba kas harian</h3><div class="sub">Kolom per hari; kolom di bawah garis nol = rugi kas (biasanya hari gajian / belanja besar)</div></div></div><div id="g-laba"></div><div class="legend-row xs muted"><span><i style="background:var(--s3)"></i>Laba</span><span><i style="background:var(--s5)"></i>Rugi kas</span></div></div>
         </div>
         <div class="grid g-2">
-          <div class="card"><div class="card-head"><div><h3>Menu Terlaris</h3><div class="sub">Peringkat berdasarkan cup terjual • tren vs periode sebelumnya</div></div><div id="mtab"></div></div><div id="menu-list"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Menu terlaris</h3><div class="sub">Peringkat & perubahan dibanding periode sebelumnya</div></div><div id="mtab"></div></div><div id="menu-list"></div></div>
           <div class="stack">
-            <div class="card"><div class="card-head"><h3>Kontribusi Kategori</h3><span class="badge plain">omset</span></div><div class="donut-wrap"><div id="d-kat"></div>${legendaDonat(d.kategori.map((k, i) => ({ name: k.nama, value: k.omset, color: SERI[i] })), rpK)}</div></div>
-            <div class="card"><h3>Metode Pembayaran</h3><div class="mt-12">${segbarHTML(d.metode.map((m, i) => ({ name: m.nama, value: m.total, color: SERI[i] })), rpK)}</div><h3 class="mt-20">Jenis Pesanan</h3><div class="mt-12">${segbarHTML(d.jenis.map((m, i) => ({ name: m.nama, value: m.cup, color: SERI[(i + 1) % 5] })), (v) => fmtNum(v) + ' cup')}</div></div>
+            <div class="card"><div class="card-head"><h3>Porsi kategori</h3><span class="badge plain">omset</span></div><div class="donut-wrap"><div id="d-kat"></div>${legendaDonat(d.kategori.map((k, i) => ({ name: k.nama, value: k.omset, color: SERI[i] })), rpK)}</div></div>
+            <div class="card"><h3>Cara bayar</h3><div class="mt-12">${segbarHTML(d.metode.map((m, i) => ({ name: m.nama, value: m.total, color: SERI[i] })), rpK)}</div><h3 class="mt-20">Jenis pesanan</h3><div class="mt-12">${segbarHTML(d.jenis.map((m, i) => ({ name: m.nama, value: m.cup, color: SERI[(i + 1) % 5] })), (v) => fmtNum(v) + ' cup')}</div></div>
           </div>
         </div>
         <div class="grid g-main-l">
-          <div class="card"><div class="card-head"><div><h3>Pola Jam Ramai</h3><div class="sub">Cup terjual per jam × hari (${esc((Store.app || {}).zona || 'WITA')}) — atur jadwal racik & shift</div></div></div>${heatmapHTML(d.heat)}</div>
-          <div class="card"><div class="card-head"><div><h3>Rata-rata Pemasukan per Hari</h3><div class="sub">Hari buka dalam periode</div></div></div><div id="g-dow"></div></div>
+          <div class="card"><div class="card-head"><div><h3>Jam ramai</h3><div class="sub">Cup terjual per jam × hari (${esc((Store.app || {}).zona || 'WITA')}) — atur jadwal racik & shift</div></div></div>${heatmapHTML(d.heat)}</div>
+          <div class="card"><div class="card-head"><div><h3>Rata-rata pemasukan per hari</h3><div class="sub">Hari buka dalam periode</div></div></div><div id="g-dow"></div></div>
         </div>
         <div class="grid g-3">
-          <div class="card"><h3>Biaya per Kategori</h3><div class="mt-12">${d.biayaKategori.length ? hbarHTML(d.biayaKategori.map((b) => ({ name: b.nama, value: b.total, color: 'var(--c-danger)' })), { fmt: rpK }) : kosongHTML('Tidak ada biaya', 'receipt')}</div></div>
-          <div class="card"><h3>Belanja per Bahan</h3><div class="mt-12">${d.belanjaBahan.length ? hbarHTML(d.belanjaBahan.slice(0, 7).map((b) => ({ name: b.nama, value: b.total, color: 'var(--s2)' })), { fmt: rpK }) : kosongHTML('Tidak ada belanja', 'bag')}</div></div>
-          <div class="card"><h3>Pencapaian Target Cup</h3><div class="center mt-16"><div class="kpi-val" style="font-size:42px">${s.hariAktif ? Math.round(s.hariTarget / s.hariAktif * 100) : 0}%</div><div class="muted small">${s.hariTarget} dari ${s.hariAktif} hari buka mencapai ${d.target} cup</div></div><div class="meter mt-16 success"><i data-w="${s.hariAktif ? s.hariTarget / s.hariAktif * 100 : 0}"></i></div><div class="row between mt-16 small"><span class="muted">Rata-rata cup/hari</span><b>${fmtNum(s.avgCupHari, 1)}</b></div><div class="row between small mt-4"><span class="muted">Rata-rata pemasukan/hari</span><b>${rp(s.avgHari)}</b></div></div>
+          <div class="card"><h3>Biaya per kategori</h3><div class="mt-12">${d.biayaKategori.length ? hbarHTML(d.biayaKategori.map((b) => ({ name: b.nama, value: b.total, color: 'var(--c-danger)' })), { fmt: rpK }) : kosongHTML('Tidak ada biaya', 'receipt')}</div></div>
+          <div class="card"><h3>Belanja per bahan</h3><div class="mt-12">${d.belanjaBahan.length ? hbarHTML(d.belanjaBahan.slice(0, 7).map((b) => ({ name: b.nama, value: b.total, color: 'var(--s2)' })), { fmt: rpK }) : kosongHTML('Tidak ada belanja', 'bag')}</div></div>
+          <div class="card"><h3>Pencapaian target cup</h3><div class="center mt-16"><div class="kpi-val" style="font-size:42px">${s.hariAktif ? Math.round(s.hariTarget / s.hariAktif * 100) : 0}%</div><div class="muted small">${s.hariTarget} dari ${s.hariAktif} hari buka mencapai ${d.target} cup</div></div><div class="meter mt-16 success"><i data-w="${s.hariAktif ? s.hariTarget / s.hariAktif * 100 : 0}"></i></div><div class="row between mt-16 small"><span class="muted">Rata-rata cup/hari</span><b>${fmtNum(s.avgCupHari, 1)}</b></div><div class="row between small mt-4"><span class="muted">Rata-rata pemasukan/hari</span><b>${rp(s.avgHari)}</b></div></div>
         </div>
         <div class="card"><div class="card-head"><div><h3>Data harian</h3><div class="sub">Angka yang sama dengan grafik di atas</div></div><button class="btn sm" data-act="pdf">${ic('eye', 'sm')}Pratinjau & unduh</button></div><div class="table-wrap" style="max-height:360px"><table class="tbl cards"><thead><tr><th>Tanggal</th><th class="r">Trx</th><th class="r">Cup</th><th class="r">Pemasukan</th><th class="r">Biaya</th><th class="r">Belanja</th><th class="r">Laba Kas</th></tr></thead><tbody>${d.harian.slice().reverse().map((h) => `<tr><td data-l="Tanggal" class="main-cell"><b>${tgl(h.t, 'EEE, d MMM yyyy')}</b></td><td data-l="Trx" class="r">${h.trx}</td><td data-l="Cup" class="r">${h.cup}</td><td data-l="Pemasukan" class="r">${rp(h.masuk)}</td><td data-l="Biaya" class="r bad">${rp(h.ops)}</td><td data-l="Belanja" class="r bad">${rp(h.belanja)}</td><td data-l="Laba" class="r"><b class="${h.laba < 0 ? 'bad' : 'ok'}">${rp(h.laba)}</b></td></tr>`).join('')}</tbody></table></div></div>
       </div>`;
@@ -187,10 +186,10 @@ Pages.analitik = {
 /* ============================== REKAP KAS ============================== */
 Pages.rekap = {
   render(el) {
-    let pr = Param.rekap(), tab = 'Semua', cari = '', hal = 1, label = 'Bulan Ini';
+    let pr = Param.rekap(), tab = 'Semua', cari = '', hal = 1, label = 'bulan ini';
     el.innerHTML = `${kepala({ eyebrow: 'Akses Khusus Pemilik • Rekap_Kas_Harian', judul: 'Rekap kas', desc: 'Buku kas harian: saldo kas = saldo kemarin − belanja bahan + omset bersih. Koreksi hari yang sudah closing langsung dari baris tanggalnya.', acts: `<div id="rg"></div><button class="btn" data-act="pdf">${ic('eye', 'sm')}Pratinjau & unduh</button>` })}<div id="isi"></div>`;
-    $('#rg', el).innerHTML = segHTML([{ v: 'bulan', l: BULAN[+hariIni().slice(5, 7) - 1] }, { v: '7', l: '7 Hari' }, { v: '30', l: '30 Hari' }, { v: 'lalu', l: 'Bulan Lalu' }], 'bulan');
-    pasangSeg($('#rg .seg', el), (v) => { const t = hariIni(); if (v === 'bulan') { pr = Param.rekap(); label = 'Bulan Ini'; } else if (v === 'lalu') { const akhir = addDays(awalBulan(t), -1); pr = { dari: awalBulan(akhir), sampai: akhir }; label = BULAN[+akhir.slice(5, 7) - 1]; } else { pr = { dari: addDays(t, -(+v - 1)), sampai: t }; label = v + ' Hari'; } hal = 1; muat(); });
+    $('#rg', el).innerHTML = segHTML([{ v: 'bulan', l: BULAN[+hariIni().slice(5, 7) - 1] }, { v: '7', l: '7 hari' }, { v: '30', l: '30 hari' }, { v: 'lalu', l: 'Bulan lalu' }], 'bulan');
+    pasangSeg($('#rg .seg', el), (v) => { const t = hariIni(); if (v === 'bulan') { pr = Param.rekap(); label = 'bulan ini'; } else if (v === 'lalu') { const akhir = addDays(awalBulan(t), -1); pr = { dari: awalBulan(akhir), sampai: akhir }; label = BULAN[+akhir.slice(5, 7) - 1]; } else { pr = { dari: addDays(t, -(+v - 1)), sampai: t }; label = v + ' hari'; } hal = 1; muat(); });
     const isi = $('#isi', el);
     let data = null;
     const gambar = (d) => {
@@ -223,7 +222,7 @@ Pages.rekap = {
       $('#cari', isi).addEventListener('input', debounce((e) => { cari = e.target.value.toLowerCase(); hal = 1; tabel(); }, 200));
     };
     const tabel = () => {
-      const d = data, f = { Semua: () => true, 'Sudah Closing': (r) => r.status === 'Terkunci', 'Belum / Dibuka': (r) => r.status !== 'Terkunci', 'Ada Catatan': (r) => !!r.catatan };
+      const d = data, f = { Semua: () => true, 'Sudah closing': (r) => r.status === 'Terkunci', 'Belum / dibuka': (r) => r.status !== 'Terkunci', 'Ada catatan': (r) => !!r.catatan };
       $('#tabs', isi).innerHTML = Object.keys(f).map((k) => `<button class="chip ${k === tab ? 'on' : ''}" data-tab="${k}">${k} <span class="n">(${d.rows.filter(f[k]).length})</span></button>`).join('');
       const rows = d.rows.filter(f[tab]).filter((r) => !cari || (r.tanggal + ' ' + tgl(r.tanggal, 'd MMMM yyyy EEEE') + ' ' + r.catatan + ' ' + r.oleh).toLowerCase().includes(cari));
       const per = 10, page = rows.slice((hal - 1) * per, hal * per);

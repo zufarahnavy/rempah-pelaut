@@ -75,7 +75,7 @@ Bagian ini untuk Anda yang **sudah** memakai versi 1.0. Semua data (transaksi, c
 ### Apa yang baru di v1.1
 | Area | Perubahan |
 |---|---|
-| Tampilan | Gaya baru "kedai hangat & rapi": datar, tanpa gradasi & efek kaca, huruf Plus Jakarta Sans. Animasi hanya sekali per halaman, tidak berkedip saat data diperbarui |
+| Tampilan & gerak | Gaya baru "kedai hangat & rapi": datar, tanpa gradasi & efek kaca, huruf Plus Jakarta Sans. Kartu masuk bertahap, angka menghitung naik, grafik tergambar saat halaman dibuka; saat data berubah, angka & grafik ber-*morph* dari nilai lama ke nilai baru tanpa berkedip |
 | POS | Pilihan tampilan **kartu** atau **daftar**; ringkasan pesanan menyebut nama setiap menu; angka Total masuk tidak terpotong; POS terkunci otomatis setelah closing |
 | Pembatalan | Kotak centang di setiap daftar transaksi, biaya, nota belanja, opname, menu, bahan, aset, pengguna, dan draf dokumen. Data dibatalkan dengan alasan, **tidak dihapus** |
 | Koreksi Owner | Hari yang sudah closing bisa langsung dikoreksi Owner (dengan alasan). Saldo hari itu dan sesudahnya dihitung ulang, slip yang sudah terbit ditandai **dikoreksi** |
